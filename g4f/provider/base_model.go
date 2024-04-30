@@ -14,8 +14,8 @@ import (
 
 type Provider interface {
 	// model, message, stream
-	CreateCompletionStream(string, g4f.ChatRequest) (chan string, error)
-	CreateCompletion(string, g4f.ChatRequest) (string, error)
+	CreateCompletionStream(g4f.ChatRequest) (g4f.ChatResponse, error)
+	CreateCompletion(g4f.ChatRequest) (g4f.ChatResponse, error)
 }
 
 type RetryProvider interface {
@@ -32,79 +32,70 @@ type BaseProvider struct {
 	SupportMessageHistory bool
 	Params                string
 	ApiKey                string
+	ProxyUrl              string
+	UseProxy              bool
 }
 
-func (a *BaseProvider) CreateCompletionStream(model string, req g4f.ChatRequest) (chan string, error) {
+func (a *BaseProvider) CreateCompletionStream(req g4f.ChatRequest) (chan string, error) {
 	return nil, nil
 }
 
-func (a *BaseProvider) CreateCompletion(model string, req g4f.ChatRequest) (string, error) {
+func (a *BaseProvider) CreateCompletion(req g4f.ChatRequest) (g4f.ChatResponse, error) {
 
 	headers := map[string]string{
-		//"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-		//"accept":             "*/*",
-		//"Connection":      "keep-alive",
-		//"accept-language": "en,fr-FR;q=0.9,fr;q=0.8,es-ES;q=0.7,es;q=0.6,en-US;q=0.5,am;q=0.4,de;q=0.3",
-		//"cache-control":   "no-cache",
-		//"origin":             "https://chatgpt.ai",
-		//"pragma":             "no-cache",
-		//"sec-ch-ua":          `"Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"`,
-		//"sec-ch-ua-mobile":   "?0",
-		//"sec-ch-ua-platform": `"Windows"`,
-		//"sec-fetch-dest":     "empty",
-		//"sec-fetch-mode":     "cors",
-		//"sec-fetch-site":     "same-origin",
-		//"Content-Length":     "163",
-		//"Proxy":         "127.0.0.1:7890",
-		//"Verify":        "false",
 		"Content-Type":  "application/json",
 		"Authorization": "Bearer " + a.ApiKey,
 	}
 	payload, err := json.Marshal(req)
 	if err != nil {
-		return "", err
+		return g4f.ChatResponse{}, err
 	}
 
 	request, err := http.NewRequest("POST", a.BaseUrl+"/v1/chat/completions", bytes.NewBuffer(payload))
 	if err != nil {
-		return "", err
+		return g4f.ChatResponse{}, err
 	}
 
 	for k, v := range headers {
 		request.Header.Add(k, v)
 	}
 
-	proxyURL, err := url.Parse("http://127.0.0.1:7890")
-	client := http.Client{
-		Timeout: time.Second * 10,
-		Transport: &http.Transport{
-			Proxy:                 http.ProxyURL(proxyURL),
-			MaxIdleConnsPerHost:   10,
-			ResponseHeaderTimeout: time.Second * time.Duration(5),
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-		},
+	var client http.Client
+	if a.UseProxy {
+		proxyURL, err := url.Parse(a.ProxyUrl)
+		if err != nil {
+			return g4f.ChatResponse{}, errors.New("a.ProxyUrl format error")
+		}
+		client = http.Client{
+			Timeout: time.Second * 10,
+			Transport: &http.Transport{
+				Proxy:                 http.ProxyURL(proxyURL),
+				MaxIdleConnsPerHost:   10,
+				ResponseHeaderTimeout: time.Second * time.Duration(5),
+				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+	} else {
+		client = http.Client{
+			Timeout: time.Second * 10,
+		}
 	}
 	resp, err := client.Do(request)
 	if err != nil {
-		return "", err
+		return g4f.ChatResponse{}, err
+	}
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		return g4f.ChatResponse{}, errors.New("request failed")
 	}
 
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var respData map[string]interface{}
+	var respData g4f.ChatResponse
 	err = json.Unmarshal(respBody, &respData)
 	if err != nil {
-		return "", err
+		return g4f.ChatResponse{}, err
 	}
 
-	data, ok := respData["data"].(string)
-	if !ok {
-		return "", errors.New("Failed to extract 'data' value from JSON response")
-	}
-
-	return data, nil
+	return respData, nil
 }
