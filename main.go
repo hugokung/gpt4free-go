@@ -3,7 +3,9 @@ package main
 import (
 	"G4f/g4f"
 	"G4f/g4f/provider"
+	"errors"
 	"fmt"
+	"io"
 )
 
 func main() {
@@ -16,16 +18,34 @@ func main() {
 		Temperature: 1.0,
 		TopP:        1,
 		N:           1,
-		Stream:      false,
+		Stream:      true,
+		Model:       "gpt-3.5-turbo",
 	}
 	p := provider.BaseProvider{
 		BaseUrl: "https://api.openai.com",
 		ApiKey:  "sk-OsMMq65tXdfOIlTUYtocSL7NCsmA7CerN77OkEv29dODg1EA",
 	}
-	res, err := p.CreateCompletion(chatRequst)
+	//res, err := p.CreateCompletion(chatRequst)
+	//if err != nil {
+	//fmt.Printf("CreateCompletion error: %v\n", err)
+	//}
+	//fmt.Println(res)
+	stream, err := p.CreateCompletionStream(chatRequst)
 	if err != nil {
-		fmt.Printf("CreateCompletion error: %v\n", err)
+		fmt.Printf("CreateCompletionStream error: %v\n", err)
+	} else {
+		for {
+			response, err := stream.Recv()
+			if errors.Is(err, io.EOF) {
+				fmt.Println("Stream finished")
+				return
+			}
+			if err != nil {
+				fmt.Printf("Stream error: %v\n", err)
+				return
+			}
+			fmt.Println(response.Choices[0].Delta.Content)
+		}
 	}
-	fmt.Println(res)
 	return
 }

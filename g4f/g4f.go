@@ -52,3 +52,54 @@ type ChatResponse struct {
 	Object            string                 `json:"object"`
 	Usage             *ChatResponseUsage     `json:"usage"`
 }
+
+type ChatStreamResponseFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+type ChatStreamResponseToolCalls struct {
+	Index    int                         `json:"index"`
+	ID       string                      `json:"id"`
+	Type     string                      `json:"type"`
+	Function *ChatStreamResponseFunction `json:"function"`
+}
+
+type ChatStreamResponseDelta struct {
+	Content  string                       `json:"content"`
+	ToolCall *ChatStreamResponseToolCalls `json:"tool_call"`
+	Role     string                       `json:"role"`
+}
+
+type ChatStreamTopLogprobs struct {
+	Token   string `json:"token"`
+	Logprob int    `json:"logprob"`
+	Bytes   []int  `json:"bytes"`
+}
+
+type ChatStreamLogprobsContent struct {
+	Token       string                   `json:"token"`
+	Logprob     int                      `json:"logprob"`
+	Bytes       []int                    `json:"bytes"`
+	TopLogprobs []*ChatStreamTopLogprobs `json:"top_logrobs"`
+}
+
+type ChatStreamResponseLogprobs struct {
+	Content []*ChatStreamLogprobsContent `json:"content"`
+}
+
+type ChatStreamResponseChoices struct {
+	Delta        *ChatStreamResponseDelta    `json:"delta"`
+	Logprobs     *ChatStreamResponseLogprobs `json:"logprobs"`
+	FinishReason string                      `json:"finish_reason"`
+	Index        int                         `json:"index"`
+}
+
+type ChatStreamResponse struct {
+	ID                string                       `json:"id"`
+	Choices           []*ChatStreamResponseChoices `json:"choices"`
+	Created           int                          `json:"created"`
+	Model             string                       `json:"model"`
+	SystemFingerprint string                       `json:"system_fingerprint"`
+	Object            string                       `json:"object"`
+}
