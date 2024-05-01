@@ -1,7 +1,6 @@
 package main
 
 import (
-	"G4f/g4f"
 	"G4f/g4f/provider"
 	"errors"
 	"fmt"
@@ -9,11 +8,11 @@ import (
 )
 
 func main() {
-	msg := g4f.ChatMessage{
+	msg := provider.ChatMessage{
 		{"role": "system", "content": "You are a helpful assistant."},
 		{"role": "user", "content": "hello !"},
 	}
-	chatRequst := g4f.ChatRequest{
+	chatRequst := provider.ChatRequest{
 		Messages:    msg,
 		Temperature: 1.0,
 		TopP:        1,
@@ -21,9 +20,11 @@ func main() {
 		Stream:      true,
 		Model:       "gpt-3.5-turbo",
 	}
-	p := provider.BaseProvider{
-		BaseUrl: "https://api.openai.com",
-		ApiKey:  "sk-OsMMq65tXdfOIlTUYtocSL7NCsmA7CerN77OkEv29dODg1EA",
+	p := provider.OpenAi{
+		BaseProvider: provider.BaseProvider{
+			BaseUrl: "https://api.openai.com",
+			ApiKey:  "sk-OsMMq65tXdfOIlTUYtocSL7NCsmA7CerN77OkEv29dODg1EA",
+		},
 	}
 	//res, err := p.CreateCompletion(chatRequst)
 	//if err != nil {
