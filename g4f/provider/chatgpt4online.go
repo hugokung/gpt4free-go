@@ -27,17 +27,20 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 	resp, err := http.Get(targetUrl)
 	if err != nil {
 		errCh <- err
+		return
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		errCh <- err
+		return
 	}
 
 	re := regexp.MustCompile(`restNonce&quot;:&quot;(.*?)&quot;`)
 	matches := re.FindStringSubmatch(string(respBody))
 	if len(matches) == 0 {
 		errCh <- errors.New("No nonce found")
+		return
 	}
 	c.Wpnonce = matches[0]
 
@@ -45,6 +48,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 	matches = re.FindStringSubmatch(string(respBody))
 	if len(matches) == 0 {
 		errCh <- errors.New("No contextId found")
+		return
 	}
 	c.ContextID = matches[0]
 
@@ -82,10 +86,12 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 	payload, err := json.Marshal(data)
 	if err != nil {
 		errCh <- err
+		return
 	}
 	req, err := http.NewRequest("POST", targetUrl+"/wp-json/mwai-ui/v1/chats/submit", bytes.NewBuffer(payload))
 	if err != nil {
 		errCh <- err
+		return
 	}
 	header["x-wp-nonce"] = c.Wpnonce
 
@@ -97,6 +103,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		proxyURL, err := url.Parse(c.ProxyUrl)
 		if err != nil {
 			errCh <- errors.New("a.ProxyUrl format error")
+			return
 		}
 		client = http.Client{
 			Timeout: time.Second * 10,
@@ -115,6 +122,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 	resp, err = client.Do(req)
 	if err != nil {
 		errCh <- err
+		return
 	}
 
 	reader := bufio.NewReader(resp.Body)
@@ -123,8 +131,10 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		if rdErr != nil {
 			if errors.Is(rdErr, io.EOF) {
 				errCh <- errors.New("incomplete stream")
+				return
 			}
 			errCh <- rdErr
+			return
 		}
 
 		if rawLine == "" || rawLine[0] == ':' {
@@ -142,6 +152,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 				recv <- data[1]
 			default:
 				errCh <- errors.New("unexpected type: " + data[0])
+				return
 			}
 		}
 	}

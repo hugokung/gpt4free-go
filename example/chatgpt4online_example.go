@@ -15,7 +15,7 @@ func main() {
 	}
 	recvCh := make(chan string)
 	errCh := make(chan error)
-	chat.CreateAsyncGenerator(msg, recvCh, errCh)
+	go chat.CreateAsyncGenerator(msg, recvCh, errCh)
 	for {
 		select {
 		case resp := <-recvCh:
