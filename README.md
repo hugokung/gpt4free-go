@@ -1,2 +1,6 @@
 # gpt4free-go
-This is a replication project for the golang version of xtekky/gpt4free
+This project is only used for learning golang.
+
+## Progress
+[x] chatgpt4online
+[x] OpenAI(api)

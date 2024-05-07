@@ -1,12 +1,14 @@
 package provider
 
 import (
+	"G4f/g4f"
 	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -20,11 +22,41 @@ type Chatgpt4Online struct {
 	ContextID string
 }
 
-type Messages []map[string]string
+type Messages []map[string]interface{}
 
 func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan string, errCh chan error) {
 	targetUrl := "https://chatgpt4online.org/chat/"
-	resp, err := http.Get(targetUrl)
+	cookies, err := g4f.GetArgsFromBrowser(targetUrl, "127.0.0.1:7890", 5, true)
+	log.Printf("cookies: %v, err: %v\n", cookies, err)
+	if err != nil {
+		errCh <- err
+		return
+	}
+
+	header := map[string]string{
+		"Content-Type":       "application/json",
+		"Referer":            "https://chatgpt4online.org/",
+		"Sec-Ch-Ua":          "\"Not-A.Brand\";v=\"99\", \"Chromium\";v=\"124\"",
+		"Sec-Ch-Ua-Mobile":   "?0",
+		"sec-ch-ua-model":    "\"\"",
+		"Sec-Ch-Ua-Platform": "\"macOS\"",
+		"Dnt":                "1",
+		"User-Agent":         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+	}
+
+	req, err := http.NewRequest("GET", targetUrl, nil)
+	for k, v := range header {
+		req.Header.Set(k, v)
+	}
+	for k, v := range cookies {
+		ck := &http.Cookie{Name: k, Value: v}
+		req.AddCookie(ck)
+	}
+
+	cli := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := cli.Do(req)
 	if err != nil {
 		errCh <- err
 		return
@@ -42,7 +74,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		errCh <- errors.New("No nonce found")
 		return
 	}
-	c.Wpnonce = matches[0]
+	c.Wpnonce = matches[1]
 
 	re = regexp.MustCompile(`contextId&quot;:(.*?),`)
 	matches = re.FindStringSubmatch(string(respBody))
@@ -50,37 +82,17 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		errCh <- errors.New("No contextId found")
 		return
 	}
-	c.ContextID = matches[0]
-
-	header := map[string]string{
-		"accept":                      "*/*",
-		"accept-encoding":             "gzip, deflate",
-		"accept-language":             "en-US",
-		"referer":                     "",
-		"sec-ch-ua":                   "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"",
-		"sec-ch-ua-arch":              "\"x86\"",
-		"sec-ch-ua-bitness":           "\"64\"",
-		"sec-ch-ua-full-version":      "\"123.0.6312.122\"",
-		"sec-ch-ua-full-version-list": "\"Google Chrome\";v=\"123.0.6312.122\", \"Not:A-Brand\";v=\"8.0.0.0\", \"Chromium\";v=\"123.0.6312.122\"",
-		"sec-ch-ua-mobile":            "?0",
-		"sec-ch-ua-model":             "\"\"",
-		"sec-ch-ua-platform":          "\"Windows\"",
-		"sec-ch-ua-platform-version":  "\"15.0.0\"",
-		"sec-fetch-dest":              "empty",
-		"sec-fetch-mode":              "cors",
-		"sec-fetch-site":              "same-origin",
-		"user-agent":                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-	}
-
+	c.ContextID = matches[1]
+	log.Printf("nonce: %v, context: %v", c.Wpnonce, c.ContextID)
 	data := map[string]interface{}{
-		"bot_id":     "default",
 		"customId":   "",
+		"newFileId":  "",
+		"botId":      "default",
 		"session":    "N/A",
-		"chatId":     "",
+		"chatId":     g4f.GetRandomString(11),
 		"contextId":  c.ContextID,
 		"messages":   messages,
 		"newMessage": messages[len(messages)-1]["content"],
-		"newImageId": "",
 		"stream":     true,
 	}
 	payload, err := json.Marshal(data)
@@ -88,16 +100,23 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		errCh <- err
 		return
 	}
-	req, err := http.NewRequest("POST", targetUrl+"/wp-json/mwai-ui/v1/chats/submit", bytes.NewBuffer(payload))
+	req, err = http.NewRequest("POST",
+		"https://chatgpt4online.org/wp-json/mwai-ui/v1/chats/submit", bytes.NewBuffer(payload))
 	if err != nil {
 		errCh <- err
 		return
 	}
-	header["x-wp-nonce"] = c.Wpnonce
-
+	header["X-Wp-Nonce"] = c.Wpnonce
+	header["Accept"] = "text/event-stream"
 	for k, v := range header {
 		req.Header.Set(k, v)
 	}
+
+	for k, v := range cookies {
+		ck := &http.Cookie{Name: k, Value: v}
+		req.AddCookie(ck)
+	}
+
 	var client http.Client
 	if c.UseProxy {
 		proxyURL, err := url.Parse(c.ProxyUrl)
@@ -124,7 +143,14 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		errCh <- err
 		return
 	}
-
+	//defer resp.Body.Close()
+	//respBody, err = io.ReadAll(resp.Body)
+	//if err != nil {
+	//	errCh <- err
+	//	return
+	//}
+	//recv <- string(respBody)
+	//return
 	reader := bufio.NewReader(resp.Body)
 	for {
 		rawLine, rdErr := reader.ReadString('\n')
