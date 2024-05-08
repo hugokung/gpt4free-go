@@ -25,8 +25,8 @@ type Chatgpt4Online struct {
 type Messages []map[string]interface{}
 
 func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan string, errCh chan error) {
-	targetUrl := "https://chatgpt4online.org/chat/"
-	cookies, err := g4f.GetArgsFromBrowser(targetUrl, "127.0.0.1:7890", 5, true)
+
+	cookies, err := g4f.GetArgsFromBrowser(c.BaseUrl+"/chat/", c.ProxyUrl, 5, false)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -35,7 +35,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 
 	header := map[string]string{
 		"Content-Type":       "application/json",
-		"Referer":            "https://chatgpt4online.org/",
+		"Referer":            c.BaseUrl,
 		"Sec-Ch-Ua":          "\"Not-A.Brand\";v=\"99\", \"Chromium\";v=\"124\"",
 		"Sec-Ch-Ua-Mobile":   "?0",
 		"sec-ch-ua-model":    "\"\"",
@@ -44,7 +44,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		"User-Agent":         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
 	}
 
-	req, err := http.NewRequest("GET", targetUrl, nil)
+	req, err := http.NewRequest("GET", c.BaseUrl+"/chat/", nil)
 	for k, v := range header {
 		req.Header.Set(k, v)
 	}
@@ -101,7 +101,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		return
 	}
 	req, err = http.NewRequest("POST",
-		"https://chatgpt4online.org/wp-json/mwai-ui/v1/chats/submit", bytes.NewBuffer(payload))
+		c.BaseUrl+"/wp-json/mwai-ui/v1/chats/submit", bytes.NewBuffer(payload))
 	if err != nil {
 		errCh <- err
 		return
@@ -143,14 +143,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		errCh <- err
 		return
 	}
-	//defer resp.Body.Close()
-	//respBody, err = io.ReadAll(resp.Body)
-	//if err != nil {
-	//	errCh <- err
-	//	return
-	//}
-	//recv <- string(respBody)
-	//return
+
 	reader := bufio.NewReader(resp.Body)
 	for {
 		rawLine, rdErr := reader.ReadString('\n')

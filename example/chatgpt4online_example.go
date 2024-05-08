@@ -17,7 +17,10 @@ func main() {
 		msg[i]["timestamp"] = time.Now().Unix()
 	}
 	chat := provider.Chatgpt4Online{
-		BaseProvider: provider.BaseProvider{},
+		BaseProvider: provider.BaseProvider{
+			BaseUrl:  "https://chatgpt4online.org",
+			ProxyUrl: "127.0.0.1:7890",
+		},
 	}
 	recvCh := make(chan string)
 	errCh := make(chan error)
