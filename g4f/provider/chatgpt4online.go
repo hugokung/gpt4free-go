@@ -22,8 +22,6 @@ type Chatgpt4Online struct {
 	ContextID string
 }
 
-type Messages []map[string]interface{}
-
 func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan string, errCh chan error) {
 
 	cookies, err := g4f.GetArgsFromBrowser(c.BaseUrl+"/chat/", c.ProxyUrl, 5, false)

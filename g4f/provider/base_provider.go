@@ -13,3 +13,5 @@ type BaseProvider struct {
 	ProxyUrl              string
 	UseProxy              bool
 }
+
+type Messages []map[string]interface{}
