@@ -31,16 +31,8 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recv chan strin
 		return
 	}
 
-	header := map[string]string{
-		"Content-Type":       "application/json",
-		"Referer":            c.BaseUrl,
-		"Sec-Ch-Ua":          "\"Not-A.Brand\";v=\"99\", \"Chromium\";v=\"124\"",
-		"Sec-Ch-Ua-Mobile":   "?0",
-		"sec-ch-ua-model":    "\"\"",
-		"Sec-Ch-Ua-Platform": "\"macOS\"",
-		"Dnt":                "1",
-		"User-Agent":         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-	}
+	header := g4f.DefaultHeader
+	header["Refer"] = c.BaseUrl
 
 	req, err := http.NewRequest("GET", c.BaseUrl+"/chat/", nil)
 	for k, v := range header {
