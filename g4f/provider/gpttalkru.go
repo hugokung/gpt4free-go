@@ -25,7 +25,8 @@ type PublicToken struct {
 
 func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
 
-	cookies, err := g4f.GetArgsFromBrowser(g.BaseUrl+"/getToken", g.ProxyUrl, true)
+	//cookies, err := g4f.GetArgsFromBrowser(g.BaseUrl+"/getToken", g.ProxyUrl, true)
+	cookies, err := g4f.GetArgsFromRod(g.BaseUrl, g.ProxyUrl)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -35,11 +36,11 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 	header := g4f.DefaultHeader
 	header["accpet"] = "application/json, text/plain, */*"
 	client := ProviderHttpClient{
-		Header:  header,
-		Url:     g.BaseUrl + "/getToken",
-		Proxy:   g.ProxyUrl,
-		Method:  "GET",
-		Cookies: cookies,
+		Header: header,
+		Url:    g.BaseUrl + "/getToken",
+		Proxy:  g.ProxyUrl,
+		Method: "GET",
+		//Cookies: cookies,
 	}
 
 	getResp, err := client.Do()

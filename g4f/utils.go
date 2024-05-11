@@ -11,10 +11,14 @@ import (
 	"io"
 	"log"
 	rd "math/rand"
-	"net/http"
 	"strings"
 	"time"
 
+	http "github.com/bogdanfinn/fhttp"
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
+	"github.com/go-rod/rod/lib/utils"
 	"github.com/playwright-community/playwright-go"
 )
 
@@ -24,11 +28,13 @@ func bypassCloudflare(page playwright.Page) error {
 			return err
 		}
 		log.Println("cloudflare protected")
-		button := page.FrameLocator("iframe").Locator("input")
+		button := page.FrameLocator("iframe").Locator("input[type=checkbox]")
 		if err := button.Click(); err != nil {
 			return err
 		}
-		time.Sleep(5 * time.Second)
+		page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
+			State: playwright.LoadStateNetworkidle,
+		})
 		title, err := page.Title()
 		if err != nil || title == "Just a moment..." {
 			if err == nil {
@@ -38,6 +44,40 @@ func bypassCloudflare(page playwright.Page) error {
 		}
 	}
 	return nil
+}
+
+func GetArgsFromRod(tgtUrl string, proxy string) (map[string]string, error) {
+	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
+		Set("--no-sandbox").
+		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false).MustLaunch()
+	browser := rod.New().ControlURL(u).MustConnect()
+	page := browser.NoDefaultDevice().MustPage(tgtUrl)
+	utils.Sleep(5)
+	log.Printf(page.MustInfo().Title)
+	iframe := page.MustElement("iframe").MustFrame()
+	p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
+	p.MustWaitStable()
+	tmp := p.MustElement("input[type=checkbox]").MustAttribute("type")
+	log.Printf("tmp: %v\n", tmp)
+	p.MustElement("input[type=checkbox]").MustClick()
+	//el := iframe.MustElement("input")
+	//el.MustClick()
+
+	utils.Sleep(3)
+	if page.MustInfo().Title == "Just a moment..." {
+		return nil, errors.New("bypass cloudflare failure")
+	}
+	defer browser.MustClose()
+	ck, err := page.Cookies([]string{tgtUrl})
+	if err != nil {
+		return nil, err
+	}
+
+	cookies := map[string]string{}
+	for i := range ck {
+		cookies[ck[i].Name] = ck[i].Value
+	}
+	return cookies, nil
 }
 
 func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (map[string]string, error) {
@@ -58,7 +98,9 @@ func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (m
 			return nil, err
 		}
 	} else {
-		browser, err = pw.Chromium.Launch()
+		browser, err = pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
+			Headless: playwright.Bool(false),
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -83,47 +125,47 @@ func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (m
 	//		log.Printf("response status: %v\n, response header: %v\n", r.Status(), r.Headers())
 	//	}
 	//})
-	page.SetDefaultTimeout(15000)
+	page.SetDefaultTimeout(60000)
 	if _, err := page.Goto(tgtUrl, playwright.PageGotoOptions{
 		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
 	}); err != nil {
 		return nil, err
 	}
 
-	newPage, err := browser.NewPage()
-	if err != nil {
-		return nil, err
-	}
-	err = newPage.AddInitScript(
-		playwright.Script{
-			Content: &script,
-		},
-	)
-	newPage.SetDefaultTimeout(10000)
-	if _, err := newPage.Goto(tgtUrl, playwright.PageGotoOptions{
-		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
-	}); err != nil {
-		return nil, err
-	}
+	// newPage, err := browser.NewPage()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = newPage.AddInitScript(
+	// 	playwright.Script{
+	// 		Content: &script,
+	// 	},
+	// )
+	// newPage.SetDefaultTimeout(10000)
+	// if _, err := newPage.Goto(tgtUrl, playwright.PageGotoOptions{
+	// 	WaitUntil: playwright.WaitUntilStateDomcontentloaded,
+	// }); err != nil {
+	// 	return nil, err
+	// }
 
-	page.Close()
+	//	page.Close()
 
 	if doBypassCloudflare {
 
-		cfErr := bypassCloudflare(newPage)
+		cfErr := bypassCloudflare(page)
 		if cfErr != nil {
 			return nil, cfErr
 		}
 	}
 
-	ck, err := newPage.Context().Cookies()
+	ck, err := page.Context().Cookies()
 	if err != nil {
 		return nil, err
 	}
 
 	defer pw.Stop()
 	defer browser.Close()
-	defer newPage.Close()
+	defer page.Close()
 
 	cookies := map[string]string{}
 
