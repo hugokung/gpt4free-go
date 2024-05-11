@@ -1,114 +1,124 @@
 package g4f
 
 import (
-	"context"
-	"log"
-	"math/rand"
+	"bufio"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
+	"errors"
+	"io"
+	rd "math/rand"
+	"strings"
 	"time"
 
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/network"
-	"github.com/chromedp/chromedp"
+	http "github.com/bogdanfinn/fhttp"
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
+	"github.com/go-rod/rod/lib/utils"
 )
 
-func GetArgsFromBrowser(tgtUrl string, proxy string, timeout int, doBypassCloudflare bool) (map[string]string, error) {
-
-	opts := []chromedp.ExecAllocatorOption{
-		chromedp.Flag("headless", true),
+func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (map[string]string, error) {
+	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
+		Set("--no-sandbox").
+		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false).MustLaunch()
+	browser := rod.New().ControlURL(u).MustConnect()
+	page := browser.NoDefaultDevice().MustPage(tgtUrl)
+	utils.Sleep(5)
+	if doBypassCloudflare {
+		iframe := page.MustElement("iframe").MustFrame()
+		p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
+		p.MustWaitStable()
+		p.MustElement("input[type=checkbox]").MustClick()
+		utils.Sleep(3)
+		if page.MustInfo().Title == "Just a moment..." {
+			return nil, errors.New("bypass cloudflare failure")
+		}
 	}
-	alloctx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	ctx, _ := chromedp.NewContext(alloctx, chromedp.WithDebugf(log.Printf))
-	//cfErr := bypassCloudflare(ctx, tgtUrl)
-	//if cfErr != nil {
-	//return nil, cfErr
-	//}
-	defer cancel()
-	cookies := map[string]string{}
-	err := chromedp.Run(ctx, chromedp.Navigate(tgtUrl),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			c, err := network.GetCookies().WithUrls([]string{tgtUrl}).Do(ctx)
-			if err != nil {
-				return err
-			}
-			for _, v := range c {
-				cookies[v.Name] = v.Value
-			}
-			return nil
-		}))
-	_ = chromedp.Cancel(ctx)
+	defer browser.MustClose()
+	ck, err := page.Cookies([]string{tgtUrl})
 	if err != nil {
 		return nil, err
+	}
+
+	cookies := map[string]string{}
+	for i := range ck {
+		cookies[ck[i].Name] = ck[i].Value
 	}
 	return cookies, nil
 }
 
-func bypassCloudflare(ctx context.Context, url string) error {
-
-	// 访问目标页面
-	if err := chromedp.Run(ctx,
-		chromedp.Navigate(url),       // 将URL替换为目标网站的URL
-		chromedp.WaitVisible("body"), // 等待页面加载完成
-	); err != nil {
-		return err
-	}
-
-	// 检查是否检测到Cloudflare保护
-	var bodyClass string
-	if err := chromedp.Run(ctx, chromedp.Text("body", &bodyClass, chromedp.ByQuery)); err != nil {
-		return err
-	}
-	if bodyClass == "no-js" {
-		log.Println("Cloudflare protection detected:", url)
-
-		// 执行JavaScript以打开新标签页
-		if err := chromedp.Run(ctx, chromedp.Evaluate(`
-            document.getElementById("challenge-body-text").addEventListener('click', function() {
-                window.open("`+url+`");
-            });
-        `, nil)); err != nil {
-			log.Println("err1")
-			return err
-		}
-		time.Sleep(5 * time.Second)
-
-		// 在iframe中点击挑战按钮
-		var iframes []*cdp.Node
-
-		if err := chromedp.Run(ctx,
-			chromedp.WaitVisible(`#turnstile-wrapper iframe`, chromedp.ByQuery), // 等待iframe加载
-			chromedp.Nodes(`#turnstile-wrapper iframe`, &iframes, chromedp.ByQuery),
-		); err != nil {
-			log.Println("err2")
-			return err
-		}
-
-		if err := chromedp.Run(ctx,
-			chromedp.WaitVisible(`#challenge-stage input`, chromedp.ByQuery, chromedp.FromNode(iframes[0])), // 等待挑战按钮出现
-			chromedp.Click(`#challenge-stage input`, chromedp.ByQuery, chromedp.FromNode(iframes[0])),       // 点击挑战按钮
-		); err != nil {
-			log.Println("err3")
-			return err
-		}
-	}
-
-	// 等待页面加载完成
-	if err := chromedp.Run(ctx,
-		chromedp.Evaluate(`window.location.href = window.location.href;`, nil),
-		chromedp.WaitVisible("body:not(.no-js)"), // 等待页面加载完成
-	); err != nil {
-		log.Println("err4")
-		return err
-	}
-
-	return nil
-}
-
 func GetRandomString(length int) string {
-	rand.Seed(time.Now().UnixNano())
+	rd.Seed(time.Now().UnixNano())
 	chars := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 	result := make([]rune, length)
 	for i := range result {
-		result[i] = chars[rand.Intn(len(chars))]
+		result[i] = chars[rd.Intn(len(chars))]
 	}
 	return string(result)
+}
+
+func Encrypt(publicKeyPEM, value string) (string, error) {
+	// 解码 PEM 格式的公钥
+	block, _ := pem.Decode([]byte(publicKeyPEM))
+	if block == nil {
+		return "", errors.New("errInvalidPEM")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return "", err
+	}
+
+	// 将公钥转换为 *rsa.PublicKey 类型
+	rsaPubKey, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return "", errors.New("errInvalidPublicKey")
+	}
+
+	// 使用 RSA 加密数据
+	ciphertext, err := rsa.EncryptPKCS1v15(rand.Reader, rsaPubKey, []byte(value))
+	if err != nil {
+		return "", err
+	}
+
+	// 返回 Base64 编码的密文
+	return base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		rawLine, rdErr := reader.ReadString('\n')
+		if rdErr != nil {
+			if errors.Is(rdErr, io.EOF) {
+				errCh <- errors.New("completed stream")
+				return
+			}
+			errCh <- rdErr
+			return
+		}
+
+		if rawLine == "" || rawLine[0] == ':' {
+			continue
+		}
+
+		if strings.Contains(rawLine, ":") {
+			data := strings.SplitN(rawLine, ":", 2)
+			data[0], data[1] = strings.TrimSpace(data[0]), strings.TrimSpace(data[1])
+			switch data[0] {
+			case "data":
+				if data[1] == "[DONE]" {
+					errCh <- io.EOF
+					return
+				}
+				recvCh <- data[1]
+			default:
+				errCh <- errors.New("unexpected type: " + data[0])
+				return
+			}
+		}
+	}
 }
