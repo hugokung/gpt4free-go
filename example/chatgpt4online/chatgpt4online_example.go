@@ -19,7 +19,7 @@ func main() {
 	chat := provider.Chatgpt4Online{
 		BaseProvider: provider.BaseProvider{
 			BaseUrl:  "https://chatgpt4online.org",
-			ProxyUrl: "127.0.0.1:7890",
+			ProxyUrl: "",
 		},
 	}
 	recvCh := make(chan string)

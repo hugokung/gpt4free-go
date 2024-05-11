@@ -19,27 +19,23 @@ import (
 )
 
 func bypassCloudflare(page playwright.Page) error {
-
-	entries, err := page.Locator("#no-js").All()
-	if len(entries) == 0 {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	log.Println("cloudflare protected")
-	button := page.FrameLocator("iframe").Locator("input")
-	if err := button.Click(); err != nil {
-		return err
-	}
-	time.Sleep(3)
-
-	entries, err = page.Locator("#no-js").All()
-	if len(entries) != 0 || err != nil {
-		if err == nil {
-			return errors.New("fail to bypass cloudflare")
+	if title, err := page.Title(); err != nil || title == "Just a moment..." {
+		if err != nil {
+			return err
 		}
-		return err
+		log.Println("cloudflare protected")
+		button := page.FrameLocator("iframe").Locator("input")
+		if err := button.Click(); err != nil {
+			return err
+		}
+		time.Sleep(5 * time.Second)
+		title, err := page.Title()
+		if err != nil || title == "Just a moment..." {
+			if err == nil {
+				return errors.New("fail to bypass cloudflare")
+			}
+			return err
+		}
 	}
 	return nil
 }
@@ -72,48 +68,62 @@ func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (m
 	if err != nil {
 		return nil, err
 	}
-	page.OnResponse(func(r playwright.Response) {
-		log.Printf("response URL: %v\n response status: %v, response header: %v", r.URL(), r.Status(), r.Headers())
-	})
-	if _, err := page.Goto(tgtUrl); err != nil {
+
+	script := "Object.defineProperty(navigator, 'webdriver', { get: () => undefined})"
+	err = page.AddInitScript(
+		playwright.Script{
+			Content: &script,
+		})
+	if err != nil {
 		return nil, err
 	}
-	//time.Sleep(3 * time.Second)
-	if doBypassCloudflare {
-		if doBypassCloudflare {
 
-			log.Println("cloudflare protected")
-			button := page.FrameLocator("iframe").Locator("input")
-			if err := button.Click(); err != nil {
-				return nil, err
-			}
-			time.Sleep(3 * time.Second)
-			tmp, err := button.GetAttribute("type")
-			if err != nil {
-				return nil, err
-			}
-			log.Printf("tmp: %s\n", tmp)
-			entries, err := page.Locator(".challenge-body-text").All()
-			if len(entries) != 0 || err != nil {
-				if err == nil {
-					return nil, errors.New("fail to bypass cloudflare")
-				}
-				return nil, err
-			}
-			time.Sleep(3 * time.Second)
-		}
-		//cfErr := bypassCloudflare(page)
-		//if cfErr != nil {
-		//return nil, cfErr
-		//}
+	//page.OnResponse(func(r playwright.Response) {
+	//	if r.URL() == tgtUrl {
+	//		log.Printf("response status: %v\n, response header: %v\n", r.Status(), r.Headers())
+	//	}
+	//})
+	page.SetDefaultTimeout(15000)
+	if _, err := page.Goto(tgtUrl, playwright.PageGotoOptions{
+		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
+	}); err != nil {
+		return nil, err
 	}
-	ck, err := page.Context().Cookies()
+
+	newPage, err := browser.NewPage()
+	if err != nil {
+		return nil, err
+	}
+	err = newPage.AddInitScript(
+		playwright.Script{
+			Content: &script,
+		},
+	)
+	newPage.SetDefaultTimeout(10000)
+	if _, err := newPage.Goto(tgtUrl, playwright.PageGotoOptions{
+		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
+	}); err != nil {
+		return nil, err
+	}
+
+	page.Close()
+
+	if doBypassCloudflare {
+
+		cfErr := bypassCloudflare(newPage)
+		if cfErr != nil {
+			return nil, cfErr
+		}
+	}
+
+	ck, err := newPage.Context().Cookies()
 	if err != nil {
 		return nil, err
 	}
 
 	defer pw.Stop()
 	defer browser.Close()
+	defer newPage.Close()
 
 	cookies := map[string]string{}
 
