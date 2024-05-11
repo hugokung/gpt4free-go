@@ -9,124 +9,41 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
-	"log"
 	rd "math/rand"
-	"net/http"
 	"strings"
 	"time"
 
-	"github.com/playwright-community/playwright-go"
+	http "github.com/bogdanfinn/fhttp"
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
+	"github.com/go-rod/rod/lib/utils"
 )
 
-func bypassCloudflare(page playwright.Page) error {
-	if title, err := page.Title(); err != nil || title == "Just a moment..." {
-		if err != nil {
-			return err
-		}
-		log.Println("cloudflare protected")
-		button := page.FrameLocator("iframe").Locator("input")
-		if err := button.Click(); err != nil {
-			return err
-		}
-		time.Sleep(5 * time.Second)
-		title, err := page.Title()
-		if err != nil || title == "Just a moment..." {
-			if err == nil {
-				return errors.New("fail to bypass cloudflare")
-			}
-			return err
-		}
-	}
-	return nil
-}
-
 func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (map[string]string, error) {
-
-	pw, err := playwright.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	var browser playwright.Browser
-	if proxy != "" {
-		browser, err = pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
-			Proxy: &playwright.Proxy{
-				Server: proxy,
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		browser, err = pw.Chromium.Launch()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	page, err := browser.NewPage()
-	if err != nil {
-		return nil, err
-	}
-
-	script := "Object.defineProperty(navigator, 'webdriver', { get: () => undefined})"
-	err = page.AddInitScript(
-		playwright.Script{
-			Content: &script,
-		})
-	if err != nil {
-		return nil, err
-	}
-
-	//page.OnResponse(func(r playwright.Response) {
-	//	if r.URL() == tgtUrl {
-	//		log.Printf("response status: %v\n, response header: %v\n", r.Status(), r.Headers())
-	//	}
-	//})
-	page.SetDefaultTimeout(15000)
-	if _, err := page.Goto(tgtUrl, playwright.PageGotoOptions{
-		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
-	}); err != nil {
-		return nil, err
-	}
-
-	newPage, err := browser.NewPage()
-	if err != nil {
-		return nil, err
-	}
-	err = newPage.AddInitScript(
-		playwright.Script{
-			Content: &script,
-		},
-	)
-	newPage.SetDefaultTimeout(10000)
-	if _, err := newPage.Goto(tgtUrl, playwright.PageGotoOptions{
-		WaitUntil: playwright.WaitUntilStateDomcontentloaded,
-	}); err != nil {
-		return nil, err
-	}
-
-	page.Close()
-
+	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
+		Set("--no-sandbox").
+		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false).MustLaunch()
+	browser := rod.New().ControlURL(u).MustConnect()
+	page := browser.NoDefaultDevice().MustPage(tgtUrl)
+	utils.Sleep(5)
 	if doBypassCloudflare {
-
-		cfErr := bypassCloudflare(newPage)
-		if cfErr != nil {
-			return nil, cfErr
+		iframe := page.MustElement("iframe").MustFrame()
+		p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
+		p.MustWaitStable()
+		p.MustElement("input[type=checkbox]").MustClick()
+		utils.Sleep(3)
+		if page.MustInfo().Title == "Just a moment..." {
+			return nil, errors.New("bypass cloudflare failure")
 		}
 	}
-
-	ck, err := newPage.Context().Cookies()
+	defer browser.MustClose()
+	ck, err := page.Cookies([]string{tgtUrl})
 	if err != nil {
 		return nil, err
 	}
-
-	defer pw.Stop()
-	defer browser.Close()
-	defer newPage.Close()
 
 	cookies := map[string]string{}
-
 	for i := range ck {
 		cookies[ck[i].Name] = ck[i].Value
 	}
@@ -170,7 +87,7 @@ func Encrypt(publicKeyPEM, value string) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-func StreamResponse(resp *http.Response) (recvCh chan string, errCh chan error) {
+func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
 
 	reader := bufio.NewReader(resp.Body)
 	for {

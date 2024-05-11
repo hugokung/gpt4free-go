@@ -2,11 +2,10 @@ package provider
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
-	"net/http"
-	"net/url"
-	"time"
+	http "github.com/bogdanfinn/fhttp"
+	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/bogdanfinn/tls-client/profiles"
 )
 
 type BaseProvider struct {
@@ -36,6 +35,23 @@ type ProviderHttpClient struct {
 
 func (p *ProviderHttpClient) Do() (*http.Response, error) {
 
+	jar := tls_client.NewCookieJar()
+	var options []tls_client.HttpClientOption
+	if p.Proxy != "" {
+		options = []tls_client.HttpClientOption{
+			tls_client.WithTimeoutSeconds(600),
+			tls_client.WithClientProfile(profiles.Chrome_124),
+			tls_client.WithCookieJar(jar),
+			tls_client.WithProxyUrl(p.Proxy),
+		}
+	} else {
+		options = []tls_client.HttpClientOption{
+			tls_client.WithTimeoutSeconds(600),
+			tls_client.WithClientProfile(profiles.Okhttp4Android10),
+			tls_client.WithCookieJar(jar),
+		}
+	}
+
 	var req *http.Request
 	var err error
 
@@ -61,34 +77,14 @@ func (p *ProviderHttpClient) Do() (*http.Response, error) {
 		}
 	}
 
-	if p.Cookies != nil {
-		for k, v := range p.Cookies {
-			cookie := http.Cookie{Name: k, Value: v}
-			req.AddCookie(&cookie)
-		}
-	}
+	//if p.Cookies != nil {
+	//	for k, v := range p.Cookies {
+	//		cookie := http.Cookie{Name: k, Value: v}
+	//		req.AddCookie(&cookie)
+	//	}
+	//}
 
-	var client http.Client
-	if p.Proxy != "" {
-		proxyURL, err := url.Parse(p.Url)
-		if err != nil {
-			return nil, err
-		}
-		client = http.Client{
-			Timeout: time.Second * 10,
-			Transport: &http.Transport{
-				Proxy:                 http.ProxyURL(proxyURL),
-				MaxIdleConnsPerHost:   10,
-				ResponseHeaderTimeout: time.Second * time.Duration(5),
-				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-			},
-		}
-	} else {
-		client = http.Client{
-			Timeout: time.Second * 10,
-		}
-	}
-
+	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(), options...)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

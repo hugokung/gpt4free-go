@@ -55,7 +55,6 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 		errCh <- err
 		return
 	}
-	//fmt.Printf("getToken Result: %s\n", string(respBytes))
 	var respData PublicToken
 	err = json.Unmarshal(respBytes, &respData)
 	if err != nil {
@@ -65,11 +64,8 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 
 	PublicKey := respData.Response.Key.PublicKey
 
-	log.Printf("PublicKey: %s\n", PublicKey)
-
 	RandomString := g4f.GetRandomString(8)
 	ShifrText, err := g4f.Encrypt(PublicKey, RandomString)
-	log.Printf("ShifrText: %s\n", ShifrText)
 	if err != nil {
 		errCh <- err
 		return
@@ -95,14 +91,6 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 		return
 	}
 
-	recvData, errRes := g4f.StreamResponse(resp)
-	for {
-		select {
-		case res := <-recvData:
-			recvCh <- res
-		case err = <-errRes:
-			errCh <- err
-			return
-		}
-	}
+	g4f.StreamResponse(resp, recvCh, errCh)
+
 }
