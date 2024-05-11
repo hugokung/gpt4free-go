@@ -77,12 +77,12 @@ func (p *ProviderHttpClient) Do() (*http.Response, error) {
 		}
 	}
 
-	//if p.Cookies != nil {
-	//	for k, v := range p.Cookies {
-	//		cookie := http.Cookie{Name: k, Value: v}
-	//		req.AddCookie(&cookie)
-	//	}
-	//}
+	if p.Cookies != nil {
+		for k, v := range p.Cookies {
+			cookie := http.Cookie{Name: k, Value: v}
+			req.AddCookie(&cookie)
+		}
+	}
 
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(), options...)
 	resp, err := client.Do(req)
