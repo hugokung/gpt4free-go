@@ -6,11 +6,11 @@ This project is only used for learning golang.
 </div>
 
 ### GPT-3.5  
-| Website | Provider | GPT-3.5 | GPT-4 | Stream | Status | Auth |
+| Website | Provider | Stream | Status | Auth |
 | ------  | -------  | ------- | ----- | ------ | ------ | ---- |
-| [chatgpt4online.org](https://chatgpt4online.org) | `g4f.provider.Chatgpt4Online` | ✔️ | ❌ | ✔️ | ![Unknown](https://img.shields.io/badge/Unknown-grey) | ❌ |
-| [gpttalk.ru](https://gpttalk.ru) | `g4f.provider.GptTalkRu` | ✔️ | ❌ | ✔️ | ![Unknown](https://img.shields.io/badge/Unknown-grey) | ❌ |
-| [chat10.aichatos.xyz](https://chat10.aichatos.xyz) | `g4f.provider.AiChatOs` | ✔️ | ❌ | ✔️ | ![Active](https://img.shields.io/badge/Active-brightgreen) | ❌ |
+| [chatgpt4online.org](https://chatgpt4online.org) | `g4f.provider.Chatgpt4Online` | ✔️ | ![Unknown](https://img.shields.io/badge/Unknown-grey) | ❌ |
+| [gpttalk.ru](https://gpttalk.ru) | `g4f.provider.GptTalkRu` | ✔️ | ![Unknown](https://img.shields.io/badge/Unknown-grey) | ❌ |
+| [chat10.aichatos.xyz](https://chat10.aichatos.xyz) | `g4f.provider.AiChatOs` | ✔️ | ![Active](https://img.shields.io/badge/Active-brightgreen) | ❌ |
 
 
 ## Dependency 
