@@ -17,4 +17,4 @@ This project is only used for learning golang.
 - xvfb (apt-get install xvfb)
 
 ## Declaration  
-If you do not want your website to appear here, please raise an issue and I will remove it immediately. Unfortunately, most of the sites here are no longer available.
+If you do not want your website to appear here, please raise an issue and I will remove it immediately.
