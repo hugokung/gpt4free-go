@@ -3,6 +3,7 @@
 # gpt4free-go 🆓
 This project is only used for learning golang.  
 ~~Cloudflare is the biggest obstacle~~  
+</div>
 
 ### GPT-3.5  
 | Website | Provider | GPT-3.5 | GPT-4 | Stream | Status | Auth |
@@ -14,3 +15,6 @@ This project is only used for learning golang.
 
 ## Dependency 
 - xvfb (apt-get install xvfb)
+
+## Declaration  
+If you do not want your website to appear here, please raise an issue and I will remove it immediately. Unfortunately, most of the sites here are no longer available.
