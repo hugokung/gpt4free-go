@@ -5,19 +5,16 @@ import (
 	"fmt"
 )
 
-// xvfb-run go run gpttalkru_example.go
 func main() {
-
 	msg := provider.Messages{
-		{"role": "assistant", "content": "Hi! How can I help you?"},
-		{"role": "user", "content": "are you gpt-4?"},
+		{"Role": "user", "Content": "你是 gpt-3.5吗?"},
 	}
 
-	chat := provider.GptTalkRu{
+	chat := provider.AiChatOs{
 		BaseProvider: provider.BaseProvider{
-			BaseUrl:  "https://gpttalk.ru",
-			ProxyUrl: "",
+			BaseUrl: "https://chat10.aichatos.xyz",
 		},
+		Api: "https://api.binjie.fun",
 	}
 
 	recvCh := make(chan string)

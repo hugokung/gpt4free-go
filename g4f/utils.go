@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
+	"log"
 	rd "math/rand"
 	"strings"
 	"time"
@@ -51,11 +52,11 @@ func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (m
 }
 
 func GetRandomString(length int) string {
-	rd.Seed(time.Now().UnixNano())
+	r := rd.New(rd.NewSource(time.Now().UnixNano()))
 	chars := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 	result := make([]rune, length)
 	for i := range result {
-		result[i] = chars[rd.Intn(len(chars))]
+		result[i] = chars[r.Intn(len(chars))]
 	}
 	return string(result)
 }
@@ -94,6 +95,9 @@ func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
 		rawLine, rdErr := reader.ReadString('\n')
 		if rdErr != nil {
 			if errors.Is(rdErr, io.EOF) {
+				if len(rawLine) != 0 {
+					recvCh <- rawLine
+				}
 				errCh <- errors.New("completed stream")
 				return
 			}
@@ -114,6 +118,7 @@ func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
 					errCh <- io.EOF
 					return
 				}
+				log.Printf("data: %v", data[1])
 				recvCh <- data[1]
 			default:
 				errCh <- errors.New("unexpected type: " + data[0])

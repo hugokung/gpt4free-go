@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// xvfb-run go run chatgpt4online_example.go
 func main() {
 	msg := provider.Messages{
 		{"role": "assistant", "content": "Hi! How can I help you?", "who": "AI: ", "timestamp": 0, "id": ""},
