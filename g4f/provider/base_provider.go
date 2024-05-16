@@ -1,12 +1,49 @@
 package provider
 
 import (
+	"G4f/g4f"
 	"bytes"
 	"encoding/json"
+	"errors"
+
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/bogdanfinn/tls-client/profiles"
 )
+
+type Provider interface {
+	CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error)
+}
+
+type RetryProvider struct {
+	ProviderList        []Provider
+	Shuffle             bool
+	SingleProviderRetry bool
+	MaxRetries          int
+}
+
+func (r *RetryProvider) CreateAsyncGenerator(messages Messages, recCh chan string, errCh chan error) {
+
+	var err error
+
+	for _, p := range r.ProviderList {
+
+		nerrCh := make(chan error)
+		go p.CreateAsyncGenerator(messages, recCh, nerrCh)
+		for {
+			select {
+			case err = <-nerrCh:
+				if errors.Is(err, g4f.StreamCompleted) {
+					errCh <- err
+					return
+				}
+				errCh <- g4f.ErrStreamRestart
+				break
+			}
+		}
+	}
+	errCh <- err
+}
 
 type BaseProvider struct {
 	BaseUrl               string

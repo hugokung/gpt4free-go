@@ -13,6 +13,20 @@ type AiChatOs struct {
 	Api string
 }
 
+func (a *AiChatOs) Create() *AiChatOs {
+	return &AiChatOs{
+		Api: "https://api.binjie.fun",
+		BaseProvider: BaseProvider{
+			BaseUrl:               "https://chat10.aichatos.xyz",
+			Working:               true,
+			NeedsAuth:             false,
+			SupportStream:         true,
+			SupportGpt35:          true,
+			SupportMessageHistory: true,
+		},
+	}
+}
+
 // FormatPrompt 格式化一系列消息为一个字符串，选项添加特殊标记
 func FormatPrompt(messages Messages, addSpecialTokens bool) string {
 	if !addSpecialTokens && len(messages) <= 1 {

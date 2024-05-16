@@ -14,6 +14,22 @@ type Chatgpt4Online struct {
 	ContextID string
 }
 
+func (c *Chatgpt4Online) Create() *Chatgpt4Online {
+	return &Chatgpt4Online{
+		Wpnonce:   "",
+		ContextID: "",
+		BaseProvider: BaseProvider{
+			BaseUrl:               "https://chatgpt4online.org",
+			Working:               true,
+			NeedsAuth:             false,
+			SupportStream:         true,
+			SupportGpt35:          true,
+			SupportGpt4:           true,
+			SupportMessageHistory: true,
+		},
+	}
+}
+
 func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
 
 	cookies, err := g4f.GetArgsFromBrowser(c.BaseUrl+"/chat/", c.ProxyUrl, false)

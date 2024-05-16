@@ -11,6 +11,19 @@ type GptTalkRu struct {
 	BaseProvider
 }
 
+func (g *GptTalkRu) Create() *GptTalkRu {
+	return &GptTalkRu{
+		BaseProvider: BaseProvider{
+			BaseUrl:               "https://gpttalk.ru",
+			Working:               false,
+			NeedsAuth:             false,
+			SupportStream:         true,
+			SupportGpt35:          true,
+			SupportMessageHistory: true,
+		},
+	}
+}
+
 type PublicKeyS struct {
 	PublicKey string `json:"publicKey"`
 }
