@@ -2,6 +2,7 @@ package provider
 
 import (
 	"G4f/g4f"
+	"G4f/g4f/utils"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -13,7 +14,7 @@ type AiChatOs struct {
 	Api string
 }
 
-func (a *AiChatOs) Create() *AiChatOs {
+func (a AiChatOs) Create() *AiChatOs {
 	return &AiChatOs{
 		Api: "https://api.binjie.fun",
 		BaseProvider: BaseProvider{
@@ -33,13 +34,13 @@ func FormatPrompt(messages Messages, addSpecialTokens bool) string {
 		if len(messages) == 0 {
 			return ""
 		}
-		msg := messages[0]["Content"]
+		msg := messages[0]["content"]
 		return msg.(string)
 	}
 
 	var formattedMessages []string
 	for _, message := range messages {
-		formattedMessage := fmt.Sprintf("%s: %s", "User", message["Content"].(string))
+		formattedMessage := fmt.Sprintf("%s: %s", "User", message["content"].(string))
 		formattedMessages = append(formattedMessages, formattedMessage)
 	}
 
@@ -87,5 +88,5 @@ func (a *AiChatOs) CreateAsyncGenerator(messages Messages, recvCh chan string, e
 		return
 	}
 
-	g4f.StreamResponse(resp, recvCh, errCh)
+	utils.StreamResponse(resp, recvCh, errCh)
 }

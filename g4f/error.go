@@ -6,6 +6,9 @@ import (
 )
 
 var (
+	ErrModelType     = errors.New("model type doesn't exist")
 	ErrStreamRestart = errors.New("stream restart")
-	StreamCompleted  = io.EOF
+	StreamEOF        = io.EOF
+	StreamCompleted  = errors.New("stream completed")
+	ErrResponse      = errors.New("response error")
 )

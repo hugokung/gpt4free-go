@@ -2,6 +2,7 @@ package provider
 
 import (
 	"G4f/g4f"
+	"G4f/g4f/utils"
 	"encoding/json"
 	"io"
 	"log"
@@ -11,7 +12,7 @@ type GptTalkRu struct {
 	BaseProvider
 }
 
-func (g *GptTalkRu) Create() *GptTalkRu {
+func (g GptTalkRu) Create() *GptTalkRu {
 	return &GptTalkRu{
 		BaseProvider: BaseProvider{
 			BaseUrl:               "https://gpttalk.ru",
@@ -38,7 +39,7 @@ type PublicToken struct {
 
 func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
 
-	cookies, err := g4f.GetArgsFromBrowser(g.BaseUrl+"/getToken", g.ProxyUrl, true)
+	cookies, err := utils.GetArgsFromBrowser(g.BaseUrl+"/getToken", g.ProxyUrl, true)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -77,8 +78,10 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 
 	PublicKey := respData.Response.Key.PublicKey
 
-	RandomString := g4f.GetRandomString(8)
-	ShifrText, err := g4f.Encrypt(PublicKey, RandomString)
+	log.Printf("PublicKey: %v\n", PublicKey)
+
+	RandomString := utils.GetRandomString(8)
+	ShifrText, err := utils.Encrypt(PublicKey, RandomString)
 	if err != nil {
 		errCh <- err
 		return
@@ -104,6 +107,6 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 		return
 	}
 
-	g4f.StreamResponse(resp, recvCh, errCh)
+	utils.StreamResponse(resp, recvCh, errCh)
 
 }

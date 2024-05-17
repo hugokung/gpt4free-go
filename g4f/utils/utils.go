@@ -1,6 +1,7 @@
-package g4f
+package utils
 
 import (
+	"G4f/g4f"
 	"bufio"
 	"crypto/rand"
 	"crypto/rsa"
@@ -39,6 +40,7 @@ func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (m
 		}
 	}
 	defer browser.MustClose()
+	defer page.MustClose()
 	ck, err := page.Cookies([]string{tgtUrl})
 	if err != nil {
 		return nil, err
@@ -90,6 +92,11 @@ func Encrypt(publicKeyPEM, value string) (string, error) {
 
 func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
 
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("resp status: %v\n", resp.StatusCode)
+		errCh <- g4f.ErrResponse
+		return
+	}
 	reader := bufio.NewReader(resp.Body)
 	for {
 		rawLine, rdErr := reader.ReadString('\n')
@@ -97,8 +104,10 @@ func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
 			if errors.Is(rdErr, io.EOF) {
 				if len(rawLine) != 0 {
 					recvCh <- rawLine
+					errCh <- g4f.StreamEOF
+					return
 				}
-				errCh <- errors.New("completed stream")
+				errCh <- g4f.StreamEOF
 				return
 			}
 			errCh <- rdErr
@@ -115,7 +124,7 @@ func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
 			switch data[0] {
 			case "data":
 				if data[1] == "[DONE]" {
-					errCh <- io.EOF
+					errCh <- g4f.StreamCompleted
 					return
 				}
 				log.Printf("data: %v", data[1])

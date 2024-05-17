@@ -2,6 +2,7 @@ package provider
 
 import (
 	"G4f/g4f"
+	"G4f/g4f/utils"
 	"errors"
 	"io"
 	"log"
@@ -14,7 +15,7 @@ type Chatgpt4Online struct {
 	ContextID string
 }
 
-func (c *Chatgpt4Online) Create() *Chatgpt4Online {
+func (c Chatgpt4Online) Create() *Chatgpt4Online {
 	return &Chatgpt4Online{
 		Wpnonce:   "",
 		ContextID: "",
@@ -32,7 +33,7 @@ func (c *Chatgpt4Online) Create() *Chatgpt4Online {
 
 func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
 
-	cookies, err := g4f.GetArgsFromBrowser(c.BaseUrl+"/chat/", c.ProxyUrl, false)
+	cookies, err := utils.GetArgsFromBrowser(c.BaseUrl+"/chat/", c.ProxyUrl, false)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -82,7 +83,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 		"newFileId":  "",
 		"botId":      "default",
 		"session":    "N/A",
-		"chatId":     g4f.GetRandomString(11),
+		"chatId":     utils.GetRandomString(11),
 		"contextId":  c.ContextID,
 		"messages":   messages,
 		"newMessage": messages[len(messages)-1]["content"],
@@ -102,6 +103,6 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 		return
 	}
 
-	g4f.StreamResponse(resp, recvCh, errCh)
+	utils.StreamResponse(resp, recvCh, errCh)
 
 }

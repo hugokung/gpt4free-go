@@ -1,8 +1,8 @@
 package main
 
 import (
-	"G4f/g4f"
 	"G4f/g4f/provider"
+	"G4f/g4f/utils"
 	"fmt"
 	"time"
 )
@@ -14,7 +14,7 @@ func main() {
 		{"role": "user", "content": "are you gpt-4?", "who": "User: ", "timestamp": 0, "id": ""},
 	}
 	for i := range msg {
-		msg[i]["id"] = g4f.GetRandomString(11)
+		msg[i]["id"] = utils.GetRandomString(11)
 		msg[i]["timestamp"] = time.Now().Unix()
 	}
 	chat := provider.Chatgpt4Online{

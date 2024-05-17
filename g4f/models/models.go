@@ -9,6 +9,7 @@ type Model struct {
 }
 
 var (
+	Str2Model      map[string]Model
 	gpttalkru      = provider.GptTalkRu{}
 	chatgpt4online = provider.Chatgpt4Online{}
 	aichatos       = provider.AiChatOs{}
@@ -23,10 +24,27 @@ var (
 			SingleProviderRetry: true,
 			MaxRetries:          3,
 			ProviderList: []provider.Provider{
-				gpttalkru.Create(),
 				chatgpt4online.Create(),
+			},
+		},
+	}
+
+	Gpt35Turbo = Model{
+		Name:         "gpt-3.5-turbo",
+		BaseProvider: "openai",
+		BestProvider: &provider.RetryProvider{
+			SingleProviderRetry: true,
+			MaxRetries:          3,
+			ProviderList: []provider.Provider{
 				aichatos.Create(),
 			},
 		},
 	}
 )
+
+func init() {
+	Str2Model = map[string]Model{
+		"default":       DefaultModel,
+		"gpt-3.5-turbo": Gpt35Turbo,
+	}
+}
