@@ -111,7 +111,7 @@ type ChatStreamResponseChoices struct {
 type ChatStreamResponse struct {
 	ID                string                       `json:"id"`
 	Choices           []*ChatStreamResponseChoices `json:"choices"`
-	Created           int                          `json:"created"`
+	Created           int64                        `json:"created"`
 	Model             string                       `json:"model"`
 	SystemFingerprint string                       `json:"system_fingerprint"`
 	Object            string                       `json:"object"`

@@ -19,13 +19,13 @@ func main() {
 
 	for {
 		select {
-		case err := <-cli.ErrCh:
+		case err := <-cli.StreamRespErrCh:
 			log.Printf("cli.ErrCh: %v\n", err)
 			if errors.Is(err, g4f.ErrStreamRestart) {
 				continue
 			}
 			return
-		case data := <-cli.RecCh:
+		case data := <-cli.StreamRespCh:
 			log.Printf("recv data: %v\n", data)
 		}
 	}
