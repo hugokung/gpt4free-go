@@ -1,9 +1,11 @@
 package client
 
 import (
+	"G4f/g4f"
 	"G4f/g4f/models"
 	"G4f/g4f/provider"
 	"G4f/g4f/utils"
+	"errors"
 	"time"
 )
 
@@ -82,6 +84,10 @@ func warpStreamResponse(model string, recCh chan string, errCh chan error,
 			idx += 1
 			streamRespCh <- streamResp
 		case err := <-errCh:
+			if errors.Is(err, g4f.ErrStreamRestart) {
+				streamRespErrCh <- err
+				continue
+			}
 			streamRespErrCh <- err
 			return
 		}

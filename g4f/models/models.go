@@ -40,6 +40,7 @@ var (
 			IterProvider: &provider.IterProvider{
 				Shuffle: false,
 				ProviderList: []provider.Provider{
+					gpttalkru.Create(),
 					aichatos.Create(),
 				},
 			},

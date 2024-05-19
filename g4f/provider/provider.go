@@ -89,6 +89,10 @@ func (r *RetryProvider) Create() *RetryProvider {
 	return &RetryProvider{
 		SingleProviderRetry: true,
 		MaxRetries:          3,
+		IterProvider: &IterProvider{
+			ProviderList: []Provider{},
+			Shuffle:      false,
+		},
 	}
 }
 
@@ -119,6 +123,7 @@ func (r *RetryProvider) CreateAsyncGenerator(messages Messages, recvCh chan stri
 					break
 				}
 			}
+			log.Printf("try %d time\n", i+1)
 		}
 	} else {
 		go r.IterProvider.CreateAsyncGenerator(messages, recvCh, errCh, proxy, stream, params)
