@@ -18,14 +18,13 @@ func main() {
 		msg[i]["timestamp"] = time.Now().Unix()
 	}
 	chat := provider.Chatgpt4Online{
-		BaseProvider: provider.BaseProvider{
-			BaseUrl:  "https://chatgpt4online.org",
-			ProxyUrl: "",
+		BaseProvider: &provider.BaseProvider{
+			BaseUrl: "https://chatgpt4online.org",
 		},
 	}
 	recvCh := make(chan string)
 	errCh := make(chan error)
-	go chat.CreateAsyncGenerator(msg, recvCh, errCh)
+	go chat.CreateAsyncGenerator(msg, recvCh, errCh, "", true, nil)
 	for {
 		select {
 		case resp := <-recvCh:

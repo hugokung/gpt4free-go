@@ -17,31 +17,44 @@ var (
 )
 
 func init() {
+	var (
+		aichatos            = &AiChatOs{}
+		aichatosRetry       = &RetryProvider{}
+		chatgpt4online      = &Chatgpt4Online{}
+		chatgpt4onlineRetry = &RetryProvider{}
+		gpttalkru           = &GptTalkRu{}
+		gpttalkruRetry      = &RetryProvider{}
+	)
+
+	aichatosRetry = aichatosRetry.Create()
+	chatgpt4onlineRetry = chatgpt4onlineRetry.Create()
+	gpttalkruRetry = gpttalkruRetry.Create()
+
+	aichatosRetry.ProviderList = append(aichatosRetry.ProviderList, aichatos.Create())
+	chatgpt4onlineRetry.ProviderList = append(chatgpt4onlineRetry.ProviderList, chatgpt4online.Create())
+	gpttalkruRetry.ProviderList = append(gpttalkruRetry.ProviderList, gpttalkru.Create())
+
 	Str2Provider = map[string]Provider{
-		"aichatos":       AiChatOs{}.Create(),
-		"chatgpt4online": Chatgpt4Online{}.Create(),
-		"gpttalk":        GptTalkRu{}.Create(),
+		"aichatos":       aichatosRetry,
+		"chatgpt4online": chatgpt4onlineRetry,
+		"gpttalk":        gpttalkruRetry,
 	}
 }
 
 type Provider interface {
-	CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error)
+	CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{})
 }
 
-type RetryProvider struct {
-	ProviderList        []Provider
-	Shuffle             bool
-	SingleProviderRetry bool
-	MaxRetries          int
+type IterProvider struct {
+	ProviderList []Provider
+	Shuffle      bool
 }
 
-func (r *RetryProvider) CreateAsyncGenerator(messages Messages, recCh chan string, errCh chan error) {
-
+func (iter *IterProvider) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
 	var err error
-
-	for i, p := range r.ProviderList {
+	for i, p := range iter.ProviderList {
 		nerrCh := make(chan error)
-		go p.CreateAsyncGenerator(messages, recCh, nerrCh)
+		go p.CreateAsyncGenerator(messages, recvCh, nerrCh, proxy, stream, params)
 		for {
 			flag := false
 			select {
@@ -50,7 +63,7 @@ func (r *RetryProvider) CreateAsyncGenerator(messages Messages, recCh chan strin
 					errCh <- g4f.StreamEOF
 					return
 				}
-				if i == len(r.ProviderList)-1 {
+				if i == len(iter.ProviderList)-1 {
 					errCh <- err
 					return
 				}
@@ -66,6 +79,52 @@ func (r *RetryProvider) CreateAsyncGenerator(messages Messages, recCh chan strin
 	}
 }
 
+type RetryProvider struct {
+	*IterProvider
+	SingleProviderRetry bool
+	MaxRetries          int
+}
+
+func (r *RetryProvider) Create() *RetryProvider {
+	return &RetryProvider{
+		SingleProviderRetry: true,
+		MaxRetries:          3,
+	}
+}
+
+func (r *RetryProvider) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
+
+	var err error
+	if r.SingleProviderRetry {
+		for i := 0; i < r.MaxRetries; i++ {
+			nerrCh := make(chan error)
+			go r.ProviderList[0].CreateAsyncGenerator(messages, recvCh, nerrCh, proxy, stream, params)
+			for {
+				flag := false
+				select {
+				case err = <-nerrCh:
+					if errors.Is(err, g4f.StreamEOF) || errors.Is(err, g4f.StreamCompleted) {
+						errCh <- g4f.StreamEOF
+						return
+					}
+					if i == r.MaxRetries-1 {
+						errCh <- err
+						return
+					}
+					errCh <- g4f.ErrStreamRestart
+					flag = true
+					break
+				}
+				if flag {
+					break
+				}
+			}
+		}
+	} else {
+		go r.IterProvider.CreateAsyncGenerator(messages, recvCh, errCh, proxy, stream, params)
+	}
+}
+
 type BaseProvider struct {
 	BaseUrl               string
 	Working               bool
@@ -74,10 +133,6 @@ type BaseProvider struct {
 	SupportGpt35          bool
 	SupportGpt4           bool
 	SupportMessageHistory bool
-	Params                string
-	ApiKey                string
-	ProxyUrl              string
-	UseProxy              bool
 }
 
 type Messages []map[string]interface{}

@@ -9,12 +9,12 @@ import (
 )
 
 type GptTalkRu struct {
-	BaseProvider
+	*BaseProvider
 }
 
-func (g GptTalkRu) Create() *GptTalkRu {
+func (g *GptTalkRu) Create() *GptTalkRu {
 	return &GptTalkRu{
-		BaseProvider: BaseProvider{
+		BaseProvider: &BaseProvider{
 			BaseUrl:               "https://gpttalk.ru",
 			Working:               false,
 			NeedsAuth:             false,
@@ -37,9 +37,9 @@ type PublicToken struct {
 	Response TokenResponse `json:"response"`
 }
 
-func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
+func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
 
-	cookies, err := utils.GetArgsFromBrowser(g.BaseUrl+"/getToken", g.ProxyUrl, true)
+	cookies, err := utils.GetArgsFromBrowser(g.BaseUrl+"/getToken", proxy, true)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -51,7 +51,7 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 	client := ProviderHttpClient{
 		Header:  header,
 		Url:     g.BaseUrl + "/getToken",
-		Proxy:   g.ProxyUrl,
+		Proxy:   proxy,
 		Method:  "GET",
 		Cookies: cookies,
 	}

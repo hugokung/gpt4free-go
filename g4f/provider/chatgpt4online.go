@@ -10,16 +10,16 @@ import (
 )
 
 type Chatgpt4Online struct {
-	BaseProvider
+	*BaseProvider
 	Wpnonce   string
 	ContextID string
 }
 
-func (c Chatgpt4Online) Create() *Chatgpt4Online {
+func (c *Chatgpt4Online) Create() *Chatgpt4Online {
 	return &Chatgpt4Online{
 		Wpnonce:   "",
 		ContextID: "",
-		BaseProvider: BaseProvider{
+		BaseProvider: &BaseProvider{
 			BaseUrl:               "https://chatgpt4online.org",
 			Working:               true,
 			NeedsAuth:             false,
@@ -31,9 +31,9 @@ func (c Chatgpt4Online) Create() *Chatgpt4Online {
 	}
 }
 
-func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
+func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
 
-	cookies, err := utils.GetArgsFromBrowser(c.BaseUrl+"/chat/", c.ProxyUrl, false)
+	cookies, err := utils.GetArgsFromBrowser(c.BaseUrl+"/chat/", proxy, false)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -45,7 +45,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 	client := ProviderHttpClient{
 		Header:  header,
 		Url:     c.BaseUrl + "/chat/",
-		Proxy:   c.ProxyUrl,
+		Proxy:   proxy,
 		Method:  "GET",
 		Cookies: cookies,
 	}

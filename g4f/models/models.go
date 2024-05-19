@@ -20,11 +20,13 @@ var (
 		Name:         "",
 		BaseProvider: "",
 		BestProvider: &provider.RetryProvider{
-			Shuffle:             false,
-			SingleProviderRetry: true,
+			SingleProviderRetry: false,
 			MaxRetries:          3,
-			ProviderList: []provider.Provider{
-				chatgpt4online.Create(),
+			IterProvider: &provider.IterProvider{
+				Shuffle: false,
+				ProviderList: []provider.Provider{
+					chatgpt4online.Create(),
+				},
 			},
 		},
 	}
@@ -33,10 +35,13 @@ var (
 		Name:         "gpt-3.5-turbo",
 		BaseProvider: "openai",
 		BestProvider: &provider.RetryProvider{
-			SingleProviderRetry: true,
+			SingleProviderRetry: false,
 			MaxRetries:          3,
-			ProviderList: []provider.Provider{
-				aichatos.Create(),
+			IterProvider: &provider.IterProvider{
+				Shuffle: false,
+				ProviderList: []provider.Provider{
+					aichatos.Create(),
+				},
 			},
 		},
 	}

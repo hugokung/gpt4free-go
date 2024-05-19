@@ -11,7 +11,7 @@ func main() {
 	}
 
 	chat := provider.AiChatOs{
-		BaseProvider: provider.BaseProvider{
+		BaseProvider: &provider.BaseProvider{
 			BaseUrl: "https://chat10.aichatos.xyz",
 		},
 		Api: "https://api.binjie.fun",
@@ -20,7 +20,7 @@ func main() {
 	recvCh := make(chan string)
 	errCh := make(chan error)
 
-	go chat.CreateAsyncGenerator(msg, recvCh, errCh)
+	go chat.CreateAsyncGenerator(msg, recvCh, errCh, "", true, nil)
 	for {
 		select {
 		case res := <-recvCh:

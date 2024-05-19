@@ -14,16 +14,15 @@ func main() {
 	}
 
 	chat := provider.GptTalkRu{
-		BaseProvider: provider.BaseProvider{
-			BaseUrl:  "https://gpttalk.ru",
-			ProxyUrl: "",
+		BaseProvider: &provider.BaseProvider{
+			BaseUrl: "https://gpttalk.ru",
 		},
 	}
 
 	recvCh := make(chan string)
 	errCh := make(chan error)
 
-	go chat.CreateAsyncGenerator(msg, recvCh, errCh)
+	go chat.CreateAsyncGenerator(msg, recvCh, errCh, "", true, nil)
 	for {
 		select {
 		case res := <-recvCh:

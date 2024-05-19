@@ -1,7 +1,6 @@
 package client
 
 import (
-	"G4f/g4f"
 	"G4f/g4f/models"
 	"G4f/g4f/provider"
 	"G4f/g4f/utils"
@@ -14,17 +13,11 @@ type Client struct {
 	StreamRespCh    chan provider.ChatStreamResponse
 	StreamRespErrCh chan error
 	ChatMessages    provider.Messages
-	Model           models.Model
 }
 
 func (c Client) Create(messages provider.Messages, modelType string,
 	providerType string, stream bool, proxy string, maxTokens int, ApiKey string,
 	igoredWorking bool, ignoreStream bool) (*Client, error) {
-
-	model, ok := models.Str2Model[modelType]
-	if !ok {
-		return nil, g4f.ErrModelType
-	}
 
 	cli := &Client{
 		recCh:           make(chan string),
@@ -32,10 +25,30 @@ func (c Client) Create(messages provider.Messages, modelType string,
 		StreamRespCh:    make(chan provider.ChatStreamResponse),
 		StreamRespErrCh: make(chan error),
 		ChatMessages:    messages,
-		Model:           model,
 	}
 
-	go cli.Model.BestProvider.CreateAsyncGenerator(messages, cli.recCh, cli.errCh)
+	params := map[string]interface{}{
+		"max_tokens":      maxTokens,
+		"api_key":         ApiKey,
+		"ignored_working": igoredWorking,
+		"ignore_stream":   ignoreStream,
+	}
+
+	if providerType != "" {
+		pd, ok := provider.Str2Provider[providerType]
+		if ok {
+			go pd.CreateAsyncGenerator(messages, cli.recCh, cli.errCh, proxy, stream, params)
+		}
+	}
+
+	if modelType != "" {
+		model, ok := models.Str2Model[modelType]
+		if !ok {
+			model, _ = models.Str2Model["default"]
+		}
+		go model.BestProvider.CreateAsyncGenerator(messages, cli.recCh, cli.errCh, proxy, stream, params)
+	}
+
 	go warpStreamResponse(modelType, cli.recCh, cli.errCh, cli.StreamRespCh, cli.StreamRespErrCh, maxTokens)
 
 	return cli, nil

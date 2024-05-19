@@ -10,14 +10,14 @@ import (
 )
 
 type AiChatOs struct {
-	BaseProvider
+	*BaseProvider
 	Api string
 }
 
-func (a AiChatOs) Create() *AiChatOs {
+func (a *AiChatOs) Create() *AiChatOs {
 	return &AiChatOs{
 		Api: "https://api.binjie.fun",
-		BaseProvider: BaseProvider{
+		BaseProvider: &BaseProvider{
 			BaseUrl:               "https://chat10.aichatos.xyz",
 			Working:               true,
 			NeedsAuth:             false,
@@ -48,7 +48,7 @@ func FormatPrompt(messages Messages, addSpecialTokens bool) string {
 	return fmt.Sprintf("%s\nAssistant:", formatted)
 }
 
-func (a *AiChatOs) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
+func (a *AiChatOs) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
 	header := g4f.DefaultHeader
 	header["Accept-Language"] = "en-US,en;q=0.5"
 	header["Origin"] = a.BaseUrl
@@ -77,7 +77,7 @@ func (a *AiChatOs) CreateAsyncGenerator(messages Messages, recvCh chan string, e
 	client := ProviderHttpClient{
 		Header: header,
 		Url:    a.Api + "/api/generateStream",
-		Proxy:  a.ProxyUrl,
+		Proxy:  proxy,
 		Method: "POST",
 		Data:   data,
 	}
