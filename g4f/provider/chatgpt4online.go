@@ -1,12 +1,13 @@
 package provider
 
 import (
-	"G4f/g4f"
-	"G4f/g4f/utils"
 	"errors"
 	"io"
 	"log"
 	"regexp"
+
+	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/G4f/g4f/utils"
 )
 
 type Chatgpt4Online struct {

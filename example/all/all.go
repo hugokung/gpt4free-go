@@ -1,11 +1,12 @@
 package main
 
 import (
-	"G4f/g4f"
-	"G4f/g4f/client"
-	"G4f/g4f/provider"
 	"errors"
 	"log"
+
+	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/G4f/g4f/client"
+	"github.com/hugokung/G4f/g4f/provider"
 )
 
 func main() {

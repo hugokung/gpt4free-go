@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"G4f/g4f"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -10,6 +9,7 @@ import (
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/bogdanfinn/tls-client/profiles"
+	"github.com/hugokung/G4f/g4f"
 )
 
 var (

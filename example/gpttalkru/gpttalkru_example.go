@@ -1,8 +1,9 @@
 package main
 
 import (
-	"G4f/g4f/provider"
 	"fmt"
+
+	"github.com/hugokung/G4f/g4f/provider"
 )
 
 // xvfb-run go run gpttalkru_example.go

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"G4f/g4f/provider"
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/hugokung/G4f/g4f/provider"
 )
 
 func main() {

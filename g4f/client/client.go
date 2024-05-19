@@ -1,12 +1,13 @@
 package client
 
 import (
-	"G4f/g4f"
-	"G4f/g4f/models"
-	"G4f/g4f/provider"
-	"G4f/g4f/utils"
 	"errors"
 	"time"
+
+	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/G4f/g4f/models"
+	"github.com/hugokung/G4f/g4f/provider"
+	"github.com/hugokung/G4f/g4f/utils"
 )
 
 type Client struct {

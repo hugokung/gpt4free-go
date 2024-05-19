@@ -1,12 +1,13 @@
 package provider
 
 import (
-	"G4f/g4f"
-	"G4f/g4f/utils"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/G4f/g4f/utils"
 )
 
 type AiChatOs struct {

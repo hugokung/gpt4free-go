@@ -1,10 +1,11 @@
 package main
 
 import (
-	"G4f/g4f/provider"
-	"G4f/g4f/utils"
 	"fmt"
 	"time"
+
+	"github.com/hugokung/G4f/g4f/provider"
+	"github.com/hugokung/G4f/g4f/utils"
 )
 
 // xvfb-run go run chatgpt4online_example.go

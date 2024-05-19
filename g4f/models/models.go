@@ -1,6 +1,6 @@
 package models
 
-import "G4f/g4f/provider"
+import "github.com/hugokung/G4f/g4f/provider"
 
 type Model struct {
 	Name         string

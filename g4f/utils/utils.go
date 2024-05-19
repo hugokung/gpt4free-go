@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"G4f/g4f"
 	"bufio"
 	"crypto/rand"
 	"crypto/rsa"
@@ -20,6 +19,7 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-rod/rod/lib/utils"
+	"github.com/hugokung/G4f/g4f"
 )
 
 func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (map[string]string, error) {

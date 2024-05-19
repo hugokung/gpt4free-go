@@ -1,11 +1,12 @@
 package provider
 
 import (
-	"G4f/g4f"
-	"G4f/g4f/utils"
 	"encoding/json"
 	"io"
 	"log"
+
+	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/G4f/g4f/utils"
 )
 
 type GptTalkRu struct {
