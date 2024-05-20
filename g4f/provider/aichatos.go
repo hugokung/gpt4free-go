@@ -89,5 +89,5 @@ func (a *AiChatOs) CreateAsyncGenerator(messages Messages, recvCh chan string, e
 		return
 	}
 
-	utils.StreamResponse(resp, recvCh, errCh)
+	utils.StreamResponse(resp, recvCh, errCh, nil)
 }

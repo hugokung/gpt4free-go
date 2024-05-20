@@ -90,7 +90,7 @@ func Encrypt(publicKeyPEM, value string) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
+func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error, fn func(string) (string, error)) {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("resp status: %v\n", resp.StatusCode)
@@ -128,7 +128,16 @@ func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error) {
 					return
 				}
 				log.Printf("data: %v", data[1])
-				recvCh <- data[1]
+				if fn != nil {
+					decodeData, deErr := fn(data[1])
+					if deErr != nil {
+						errCh <- deErr
+						continue
+					}
+					recvCh <- decodeData
+				} else {
+					recvCh <- data[1]
+				}
 			default:
 				errCh <- errors.New("unexpected type: " + data[0])
 				return

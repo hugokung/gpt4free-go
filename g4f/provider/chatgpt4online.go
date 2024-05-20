@@ -8,6 +8,7 @@ import (
 
 	"github.com/hugokung/G4f/g4f"
 	"github.com/hugokung/G4f/g4f/utils"
+	"github.com/tidwall/gjson"
 )
 
 type Chatgpt4Online struct {
@@ -104,6 +105,15 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 		return
 	}
 
-	utils.StreamResponse(resp, recvCh, errCh)
+	fn := func(content string) (string, error) {
+		tjson := gjson.Get(content, "type")
+		if tjson.String() == "end" {
+			return "", nil
+		}
+		djson := gjson.Get(content, "data")
+		return djson.String(), nil
+	}
+
+	utils.StreamResponse(resp, recvCh, errCh, fn)
 
 }

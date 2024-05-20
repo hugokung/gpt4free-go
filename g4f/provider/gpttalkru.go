@@ -108,6 +108,6 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 		return
 	}
 
-	utils.StreamResponse(resp, recvCh, errCh)
+	utils.StreamResponse(resp, recvCh, errCh, nil)
 
 }
