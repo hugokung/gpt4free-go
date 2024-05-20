@@ -111,13 +111,14 @@ type ChatStreamResponseChoices struct {
 type ChatStreamResponse struct {
 	ID                string                       `json:"id"`
 	Choices           []*ChatStreamResponseChoices `json:"choices"`
-	Created           int                          `json:"created"`
+	Created           int64                        `json:"created"`
 	Model             string                       `json:"model"`
 	SystemFingerprint string                       `json:"system_fingerprint"`
 	Object            string                       `json:"object"`
 }
 type OpenAi struct {
 	BaseProvider
+	ApiKey string
 }
 
 type Stream struct {
@@ -160,7 +161,7 @@ func (s *Stream) Recv() (ChatStreamResponse, error) {
 	}
 }
 
-func (a *OpenAi) CreateCompletionStream(req ChatRequest) (*Stream, error) {
+func (a *OpenAi) CreateCompletionStream(req ChatRequest, proxy string) (*Stream, error) {
 	headers := map[string]string{
 		"Content-Type":  "application/json",
 		"Accept":        "text/event-stream",
@@ -181,8 +182,8 @@ func (a *OpenAi) CreateCompletionStream(req ChatRequest) (*Stream, error) {
 	}
 
 	var client http.Client
-	if a.UseProxy {
-		proxyURL, err := url.Parse(a.ProxyUrl)
+	if proxy != "" {
+		proxyURL, err := url.Parse(proxy)
 		if err != nil {
 			return nil, errors.New("a.ProxyUrl format error")
 		}
@@ -212,7 +213,7 @@ func (a *OpenAi) CreateCompletionStream(req ChatRequest) (*Stream, error) {
 	return &Stream{reader: bufio.NewReader(resp.Body), response: resp}, nil
 }
 
-func (a *OpenAi) CreateCompletion(req ChatRequest) (ChatResponse, error) {
+func (a *OpenAi) CreateCompletion(req ChatRequest, proxy string) (ChatResponse, error) {
 
 	headers := map[string]string{
 		"Content-Type":  "application/json",
@@ -233,8 +234,8 @@ func (a *OpenAi) CreateCompletion(req ChatRequest) (ChatResponse, error) {
 	}
 
 	var client http.Client
-	if a.UseProxy {
-		proxyURL, err := url.Parse(a.ProxyUrl)
+	if proxy != "" {
+		proxyURL, err := url.Parse(proxy)
 		if err != nil {
 			return ChatResponse{}, errors.New("a.ProxyUrl format error")
 		}

@@ -1,8 +1,9 @@
 package main
 
 import (
-	"G4f/g4f/provider"
 	"fmt"
+
+	"github.com/hugokung/G4f/g4f/provider"
 )
 
 // xvfb-run go run gpttalkru_example.go
@@ -14,16 +15,15 @@ func main() {
 	}
 
 	chat := provider.GptTalkRu{
-		BaseProvider: provider.BaseProvider{
-			BaseUrl:  "https://gpttalk.ru",
-			ProxyUrl: "",
+		BaseProvider: &provider.BaseProvider{
+			BaseUrl: "https://gpttalk.ru",
 		},
 	}
 
 	recvCh := make(chan string)
 	errCh := make(chan error)
 
-	go chat.CreateAsyncGenerator(msg, recvCh, errCh)
+	go chat.CreateAsyncGenerator(msg, recvCh, errCh, "", true, nil)
 	for {
 		select {
 		case res := <-recvCh:

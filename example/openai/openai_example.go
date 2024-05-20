@@ -1,10 +1,11 @@
 package main
 
 import (
-	"G4f/g4f/provider"
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/hugokung/G4f/g4f/provider"
 )
 
 func main() {
@@ -23,15 +24,15 @@ func main() {
 	p := provider.OpenAi{
 		BaseProvider: provider.BaseProvider{
 			BaseUrl: "https://api.openai.com",
-			ApiKey:  "sk-OsMMq65tXdfOIlTUYtocSL7NCsmA7CerN77OkEv29dODg1EA",
 		},
+		ApiKey: "sk-OsMMq65tXdfOIlTUYtocSL7NCsmA7CerN77OkEv29dODg1EA",
 	}
 	//res, err := p.CreateCompletion(chatRequst)
 	//if err != nil {
 	//fmt.Printf("CreateCompletion error: %v\n", err)
 	//}
 	//fmt.Println(res)
-	stream, err := p.CreateCompletionStream(chatRequst)
+	stream, err := p.CreateCompletionStream(chatRequst, "")
 	if err != nil {
 		fmt.Printf("CreateCompletionStream error: %v\n", err)
 	} else {

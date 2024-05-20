@@ -1,22 +1,41 @@
 package provider
 
 import (
-	"G4f/g4f"
 	"errors"
 	"io"
 	"log"
 	"regexp"
+
+	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/G4f/g4f/utils"
+	"github.com/tidwall/gjson"
 )
 
 type Chatgpt4Online struct {
-	BaseProvider
+	*BaseProvider
 	Wpnonce   string
 	ContextID string
 }
 
-func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
+func (c *Chatgpt4Online) Create() *Chatgpt4Online {
+	return &Chatgpt4Online{
+		Wpnonce:   "",
+		ContextID: "",
+		BaseProvider: &BaseProvider{
+			BaseUrl:               "https://chatgpt4online.org",
+			Working:               true,
+			NeedsAuth:             false,
+			SupportStream:         true,
+			SupportGpt35:          true,
+			SupportGpt4:           true,
+			SupportMessageHistory: true,
+		},
+	}
+}
 
-	cookies, err := g4f.GetArgsFromBrowser(c.BaseUrl+"/chat/", c.ProxyUrl, false)
+func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
+
+	cookies, err := utils.GetArgsFromBrowser(c.BaseUrl+"/chat/", proxy, false)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -28,7 +47,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 	client := ProviderHttpClient{
 		Header:  header,
 		Url:     c.BaseUrl + "/chat/",
-		Proxy:   c.ProxyUrl,
+		Proxy:   proxy,
 		Method:  "GET",
 		Cookies: cookies,
 	}
@@ -66,7 +85,7 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 		"newFileId":  "",
 		"botId":      "default",
 		"session":    "N/A",
-		"chatId":     g4f.GetRandomString(11),
+		"chatId":     utils.GetRandomString(11),
 		"contextId":  c.ContextID,
 		"messages":   messages,
 		"newMessage": messages[len(messages)-1]["content"],
@@ -86,6 +105,15 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 		return
 	}
 
-	g4f.StreamResponse(resp, recvCh, errCh)
+	fn := func(content string) (string, error) {
+		tjson := gjson.Get(content, "type")
+		if tjson.String() == "end" {
+			return "", nil
+		}
+		djson := gjson.Get(content, "data")
+		return djson.String(), nil
+	}
+
+	utils.StreamResponse(resp, recvCh, errCh, fn)
 
 }

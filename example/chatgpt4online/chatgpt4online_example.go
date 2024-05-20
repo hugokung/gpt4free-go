@@ -1,10 +1,11 @@
 package main
 
 import (
-	"G4f/g4f"
-	"G4f/g4f/provider"
 	"fmt"
 	"time"
+
+	"github.com/hugokung/G4f/g4f/provider"
+	"github.com/hugokung/G4f/g4f/utils"
 )
 
 // xvfb-run go run chatgpt4online_example.go
@@ -14,18 +15,17 @@ func main() {
 		{"role": "user", "content": "are you gpt-4?", "who": "User: ", "timestamp": 0, "id": ""},
 	}
 	for i := range msg {
-		msg[i]["id"] = g4f.GetRandomString(11)
+		msg[i]["id"] = utils.GetRandomString(11)
 		msg[i]["timestamp"] = time.Now().Unix()
 	}
 	chat := provider.Chatgpt4Online{
-		BaseProvider: provider.BaseProvider{
-			BaseUrl:  "https://chatgpt4online.org",
-			ProxyUrl: "",
+		BaseProvider: &provider.BaseProvider{
+			BaseUrl: "https://chatgpt4online.org",
 		},
 	}
 	recvCh := make(chan string)
 	errCh := make(chan error)
-	go chat.CreateAsyncGenerator(msg, recvCh, errCh)
+	go chat.CreateAsyncGenerator(msg, recvCh, errCh, "", true, nil)
 	for {
 		select {
 		case resp := <-recvCh:

@@ -1,14 +1,29 @@
 package provider
 
 import (
-	"G4f/g4f"
 	"encoding/json"
 	"io"
 	"log"
+
+	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/G4f/g4f/utils"
 )
 
 type GptTalkRu struct {
-	BaseProvider
+	*BaseProvider
+}
+
+func (g *GptTalkRu) Create() *GptTalkRu {
+	return &GptTalkRu{
+		BaseProvider: &BaseProvider{
+			BaseUrl:               "https://gpttalk.ru",
+			Working:               false,
+			NeedsAuth:             false,
+			SupportStream:         true,
+			SupportGpt35:          true,
+			SupportMessageHistory: true,
+		},
+	}
 }
 
 type PublicKeyS struct {
@@ -23,9 +38,9 @@ type PublicToken struct {
 	Response TokenResponse `json:"response"`
 }
 
-func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error) {
+func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
 
-	cookies, err := g4f.GetArgsFromBrowser(g.BaseUrl+"/getToken", g.ProxyUrl, true)
+	cookies, err := utils.GetArgsFromBrowser(g.BaseUrl+"/getToken", proxy, true)
 	log.Printf("cookies: %v, err: %v\n", cookies, err)
 	if err != nil {
 		errCh <- err
@@ -37,7 +52,7 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 	client := ProviderHttpClient{
 		Header:  header,
 		Url:     g.BaseUrl + "/getToken",
-		Proxy:   g.ProxyUrl,
+		Proxy:   proxy,
 		Method:  "GET",
 		Cookies: cookies,
 	}
@@ -64,8 +79,10 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 
 	PublicKey := respData.Response.Key.PublicKey
 
-	RandomString := g4f.GetRandomString(8)
-	ShifrText, err := g4f.Encrypt(PublicKey, RandomString)
+	log.Printf("PublicKey: %v\n", PublicKey)
+
+	RandomString := utils.GetRandomString(8)
+	ShifrText, err := utils.Encrypt(PublicKey, RandomString)
 	if err != nil {
 		errCh <- err
 		return
@@ -91,6 +108,6 @@ func (g *GptTalkRu) CreateAsyncGenerator(messages Messages, recvCh chan string, 
 		return
 	}
 
-	g4f.StreamResponse(resp, recvCh, errCh)
+	utils.StreamResponse(resp, recvCh, errCh, nil)
 
 }
