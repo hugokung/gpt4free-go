@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-rod/rod/lib/utils"
 	"github.com/google/uuid"
 	"github.com/hugokung/G4f/g4f"
@@ -77,8 +78,9 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 	page := browser.MustPage("")
 	log.Printf("mustpage\n")
 	rt := page.HijackRequests()
-	rt.MustAdd("/api", func(h *rod.Hijack) {
+	rt.MustAdd("*", func(h *rod.Hijack) {
 		px, _ := url.Parse(proxy)
+		log.Printf("url: %s\n", h.Request.URL())
 		log.Printf("data: %s\n", h.Request.Body())
 		h.LoadResponse(&http.Client{
 			Transport: &http.Transport{
@@ -91,14 +93,30 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 	go rt.Run()
 	page.Navigate(l.BaseUrl)
 	utils.Sleep(5)
+	//page.WaitStable(3 * time.Second)
 	log.Printf("00000\n")
+	iframeBlock, errE := page.Element("iframe")
+	if errE == nil {
+		iframe, errf := iframeBlock.Frame()
+		log.Printf("errf: %v\n", errf)
+
+		p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
+		p.MustWaitStable()
+
+		p.MustElement("input[type=checkbox]").MustClick()
+		utils.Sleep(3)
+		//page.WaitStable(3 * time.Second)
+	} else {
+		log.Printf("errE: %v\n", errE)
+	}
+
 	page.MustElement("input[placeholder=\"Send a message\"]").MustInput("hello")
 	log.Printf("11111\n")
-	page.MustElement(".bg-gray-600 hover:bg-gray-800 items-center font-semibold text-white rounded-r-md px-5 py-3").MustClick()
+	page.MustElement("button[type=submit]").MustClick()
 	log.Printf("222222\n")
 	defer browser.Close()
 	defer page.Close()
-
+	defer rt.Stop()
 	header := g4f.DefaultHeader
 	header["Origin"] = l.BaseUrl
 	header["Referer"] = l.BaseUrl + "/"
