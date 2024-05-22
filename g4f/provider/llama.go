@@ -1,9 +1,15 @@
 package provider
 
 import (
+	"log"
+
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
+	"github.com/go-rod/rod/lib/utils"
 	"github.com/google/uuid"
 	"github.com/hugokung/G4f/g4f"
-	"github.com/hugokung/G4f/g4f/utils"
+	util "github.com/hugokung/G4f/g4f/utils"
 )
 
 type Llama struct {
@@ -55,6 +61,30 @@ func LlamaFormatPrompt(messages Messages) string {
 }
 
 func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
+
+	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
+		Set("--no-sandbox").
+		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false)
+	if proxy != "" {
+		u = u.Proxy(proxy)
+	}
+	ut := u.MustLaunch()
+	browser := rod.New().ControlURL(ut).MustConnect()
+
+	rt := browser.HijackRequests()
+	rt.MustAdd("api", func(h *rod.Hijack) {
+		log.Printf("data: %s\n", h.Request.Body())
+		h.ContinueRequest(&proto.FetchContinueRequest{})
+	})
+	go rt.Run()
+	page := browser.NoDefaultDevice().MustPage(l.BaseUrl)
+	utils.Sleep(5)
+
+	page.MustElement("input").MustInput("hello")
+	page.MustElement("#bg-gray-600 hover:bg-gray-800 items-center font-semibold text-white rounded-r-md px-5 py-3").MustClick()
+	defer browser.Close()
+	defer page.Close()
+
 	header := g4f.DefaultHeader
 	header["Origin"] = l.BaseUrl
 	header["Referer"] = l.BaseUrl + "/"
@@ -93,5 +123,5 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 		errCh <- err
 		return
 	}
-	utils.StreamResponse(resp, recvCh, errCh, nil)
+	util.StreamResponse(resp, recvCh, errCh, nil)
 }
