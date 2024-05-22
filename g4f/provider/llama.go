@@ -1,11 +1,13 @@
 package provider
 
 import (
+	"crypto/tls"
 	"log"
+	"net/http"
+	"net/url"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
-	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-rod/rod/lib/utils"
 	"github.com/google/uuid"
 	"github.com/hugokung/G4f/g4f"
@@ -65,23 +67,35 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
 		Set("--no-sandbox").
 		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false)
-	if proxy != "" {
-		u = u.Proxy(proxy)
-	}
+	//if proxy != "" {
+	//	u = u.Proxy(proxy)
+	//}
 	ut := u.MustLaunch()
+	log.Printf("connect browser\n")
 	browser := rod.New().ControlURL(ut).MustConnect()
-
-	rt := browser.HijackRequests()
-	rt.MustAdd("api", func(h *rod.Hijack) {
+	log.Printf("connected")
+	page := browser.MustPage("")
+	log.Printf("mustpage\n")
+	rt := page.HijackRequests()
+	rt.MustAdd("/api", func(h *rod.Hijack) {
+		px, _ := url.Parse(proxy)
 		log.Printf("data: %s\n", h.Request.Body())
-		h.ContinueRequest(&proto.FetchContinueRequest{})
+		h.LoadResponse(&http.Client{
+			Transport: &http.Transport{
+				Proxy:           http.ProxyURL(px),
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}, true)
+		//h.ContinueRequest(&proto.FetchContinueRequest{})
 	})
 	go rt.Run()
-	page := browser.NoDefaultDevice().MustPage(l.BaseUrl)
+	page.Navigate(l.BaseUrl)
 	utils.Sleep(5)
-
-	page.MustElement("input").MustInput("hello")
-	page.MustElement("#bg-gray-600 hover:bg-gray-800 items-center font-semibold text-white rounded-r-md px-5 py-3").MustClick()
+	log.Printf("00000\n")
+	page.MustElement("input[placeholder=\"Send a message\"]").MustInput("hello")
+	log.Printf("11111\n")
+	page.MustElement(".bg-gray-600 hover:bg-gray-800 items-center font-semibold text-white rounded-r-md px-5 py-3").MustClick()
+	log.Printf("222222\n")
 	defer browser.Close()
 	defer page.Close()
 
