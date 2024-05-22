@@ -2,7 +2,6 @@ package provider
 
 import (
 	"crypto/tls"
-	"log"
 	"net/http"
 	"net/url"
 
@@ -10,9 +9,9 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-rod/rod/lib/utils"
-	"github.com/google/uuid"
 	"github.com/hugokung/G4f/g4f"
 	util "github.com/hugokung/G4f/g4f/utils"
+	"github.com/tidwall/gjson"
 )
 
 type Llama struct {
@@ -63,60 +62,70 @@ func LlamaFormatPrompt(messages Messages) string {
 	return prompt
 }
 
-func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
+type tokenAndKey struct {
+	Token          string
+	IdempotencyKey string
+}
 
+func getTokenAndIdempotencyKey(BaseUrl string, proxy string, resCh chan tokenAndKey) {
 	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
 		Set("--no-sandbox").
 		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false)
-	//if proxy != "" {
-	//	u = u.Proxy(proxy)
-	//}
 	ut := u.MustLaunch()
-	log.Printf("connect browser\n")
-	browser := rod.New().ControlURL(ut).MustConnect()
-	log.Printf("connected")
+	browser := rod.New().ControlURL(ut).NoDefaultDevice().MustConnect()
 	page := browser.MustPage("")
-	log.Printf("mustpage\n")
+
 	rt := page.HijackRequests()
+	var token, tmpKey string
 	rt.MustAdd("*", func(h *rod.Hijack) {
-		px, _ := url.Parse(proxy)
-		log.Printf("url: %s\n", h.Request.URL())
-		log.Printf("data: %s\n", h.Request.Body())
-		h.LoadResponse(&http.Client{
-			Transport: &http.Transport{
-				Proxy:           http.ProxyURL(px),
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		}, true)
-		//h.ContinueRequest(&proto.FetchContinueRequest{})
+		var client *http.Client
+		if proxy != "" {
+			px, _ := url.Parse(proxy)
+			client = &http.Client{
+				Transport: &http.Transport{
+					Proxy:           http.ProxyURL(px),
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				},
+			}
+		} else {
+			client = &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				},
+			}
+		}
+		//log.Printf("url: %s\n", h.Request.URL())
+		//log.Printf("data: %s\n", h.Request.Body())
+		if h.Request.URL().String() == BaseUrl+"/api" {
+			token = gjson.Get(h.Request.Body(), "token").String()
+			tmpKey = gjson.Get(h.Request.Body(), "idempotencyKey").String()
+			res := tokenAndKey{
+				Token:          token,
+				IdempotencyKey: tmpKey,
+			}
+			resCh <- res
+		}
+		h.LoadResponse(client, true)
 	})
 	go rt.Run()
-	page.Navigate(l.BaseUrl)
+
+	page.Navigate(BaseUrl)
 	utils.Sleep(5)
-	//page.WaitStable(3 * time.Second)
-	log.Printf("00000\n")
-	iframeBlock, errE := page.Element("iframe")
-	if errE == nil {
-		iframe, errf := iframeBlock.Frame()
-		log.Printf("errf: %v\n", errf)
-
-		p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
-		p.MustWaitStable()
-
-		p.MustElement("input[type=checkbox]").MustClick()
-		utils.Sleep(3)
-		//page.WaitStable(3 * time.Second)
-	} else {
-		log.Printf("errE: %v\n", errE)
-	}
+	iframe := page.MustElement("iframe").MustFrame()
+	p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
+	p.MustWaitStable()
+	p.MustElement("input[type=checkbox]").MustClick()
+	utils.Sleep(3)
 
 	page.MustElement("input[placeholder=\"Send a message\"]").MustInput("hello")
-	log.Printf("11111\n")
 	page.MustElement("button[type=submit]").MustClick()
-	log.Printf("222222\n")
 	defer browser.Close()
 	defer page.Close()
 	defer rt.Stop()
+}
+
+func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errCh chan error, proxy string, stream bool, params map[string]interface{}) {
+
 	header := g4f.DefaultHeader
 	header["Origin"] = l.BaseUrl
 	header["Referer"] = l.BaseUrl + "/"
@@ -126,13 +135,9 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 	header["Accept-Encoding"] = "gzip, deflate, br"
 
 	prompt := LlamaFormatPrompt(messages)
-
-	id, err := uuid.NewRandom()
-	if err != nil {
-		errCh <- err
-		return
-	}
-
+	resCh := make(chan tokenAndKey)
+	go getTokenAndIdempotencyKey(l.BaseUrl, proxy, resCh)
+	res := <-resCh
 	data := map[string]interface{}{
 		"prompt":         prompt,
 		"model":          l.DefaultModel,
@@ -140,7 +145,8 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 		"temperature":    0.75,
 		"topP":           0.9,
 		"maxTokens":      800,
-		"idempotencyKey": id.String(),
+		"idempotencyKey": res.IdempotencyKey,
+		"token":          res.Token,
 	}
 	client := ProviderHttpClient{
 		Header: header,
