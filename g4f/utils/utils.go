@@ -25,8 +25,12 @@ import (
 func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (map[string]string, error) {
 	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
 		Set("--no-sandbox").
-		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
+		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false)
+	if proxy != "" {
+		u = u.Proxy(proxy)
+	}
+	ut := u.MustLaunch()
+	browser := rod.New().ControlURL(ut).MustConnect()
 	page := browser.NoDefaultDevice().MustPage(tgtUrl)
 	utils.Sleep(5)
 	if doBypassCloudflare {
@@ -93,7 +97,9 @@ func Encrypt(publicKeyPEM, value string) (string, error) {
 func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error, fn func(string) (string, error)) {
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("resp status: %v\n", resp.StatusCode)
+		respBytes, _ := io.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		log.Printf("resp status: %v, resp: %v\n", resp.StatusCode, string(respBytes))
 		errCh <- g4f.ErrResponse
 		return
 	}

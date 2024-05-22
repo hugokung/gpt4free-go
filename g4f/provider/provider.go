@@ -190,9 +190,26 @@ func (p *ProviderHttpClient) Do() (*http.Response, error) {
 	}
 
 	if p.Header != nil {
-		for k, v := range p.Header {
-			req.Header.Add(k, v)
+		hd := http.Header{
+			http.HeaderOrderKey: {
+				"Accept",
+				"Accept-Encoding",
+				"Accept-Language",
+				"Content-Type",
+				"Dnt",
+				"Origin",
+				"Referer",
+				"Sec-Ch-Ua",
+				"Sec-Ch-Ua-Mobile",
+				"Sec-Ch-Ua-Platform",
+				"Sec-Fetch-Dest",
+				"User-Agent",
+			},
 		}
+		for k, v := range p.Header {
+			hd[k] = []string{v}
+		}
+		req.Header = hd
 	}
 
 	if p.Cookies != nil {
