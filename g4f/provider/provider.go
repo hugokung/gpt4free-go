@@ -18,26 +18,34 @@ var (
 
 func init() {
 	var (
-		aichatos            = &AiChatOs{}
-		aichatosRetry       = &RetryProvider{}
+		aichatos      = &AiChatOs{}
+		aichatosRetry = &RetryProvider{}
+
 		chatgpt4online      = &Chatgpt4Online{}
 		chatgpt4onlineRetry = &RetryProvider{}
-		gpttalkru           = &GptTalkRu{}
-		gpttalkruRetry      = &RetryProvider{}
+
+		gpttalkru      = &GptTalkRu{}
+		gpttalkruRetry = &RetryProvider{}
+
+		llama      = &Llama{}
+		llamaRetry = &RetryProvider{}
 	)
 
 	aichatosRetry = aichatosRetry.Create()
 	chatgpt4onlineRetry = chatgpt4onlineRetry.Create()
 	gpttalkruRetry = gpttalkruRetry.Create()
+	llamaRetry = llamaRetry.Create()
 
 	aichatosRetry.ProviderList = append(aichatosRetry.ProviderList, aichatos.Create())
 	chatgpt4onlineRetry.ProviderList = append(chatgpt4onlineRetry.ProviderList, chatgpt4online.Create())
 	gpttalkruRetry.ProviderList = append(gpttalkruRetry.ProviderList, gpttalkru.Create())
+	llamaRetry.ProviderList = append(llamaRetry.ProviderList, llama.Create())
 
 	Str2Provider = map[string]Provider{
 		"aichatos":       aichatosRetry,
 		"chatgpt4online": chatgpt4onlineRetry,
 		"gpttalk":        gpttalkruRetry,
+		"llama":          llamaRetry,
 	}
 }
 

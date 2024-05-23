@@ -13,6 +13,7 @@ var (
 	gpttalkru      = provider.GptTalkRu{}
 	chatgpt4online = provider.Chatgpt4Online{}
 	aichatos       = provider.AiChatOs{}
+	llama          = provider.Llama{}
 )
 
 var (
@@ -46,11 +47,27 @@ var (
 			},
 		},
 	}
+
+	Llama2 = Model{
+		Name:         "llama2",
+		BaseProvider: "",
+		BestProvider: &provider.RetryProvider{
+			SingleProviderRetry: false,
+			MaxRetries:          3,
+			IterProvider: &provider.IterProvider{
+				Shuffle: false,
+				ProviderList: []provider.Provider{
+					llama.Create(),
+				},
+			},
+		},
+	}
 )
 
 func init() {
 	Str2Model = map[string]Model{
 		"default":       DefaultModel,
 		"gpt-3.5-turbo": Gpt35Turbo,
+		"llama2":        Llama2,
 	}
 }
