@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"regexp"
+	"strings"
 
 	"github.com/hugokung/G4f/g4f"
 	"github.com/hugokung/G4f/g4f/utils"
@@ -106,12 +107,20 @@ func (c *Chatgpt4Online) CreateAsyncGenerator(messages Messages, recvCh chan str
 	}
 
 	fn := func(content string) (string, error) {
-		tjson := gjson.Get(content, "type")
-		if tjson.String() == "end" {
-			return "", nil
+		data := strings.SplitN(content, ":", 2)
+		data[0], data[1] = strings.TrimSpace(data[0]), strings.TrimSpace(data[1])
+		if data[0] == "data" {
+			if data[1] == "[DONE]" {
+				return "", g4f.StreamCompleted
+			}
+			tjson := gjson.Get(content, "type")
+			if tjson.String() == "end" {
+				return "", g4f.StreamCompleted
+			}
+			djson := gjson.Get(content, "data")
+			return djson.String(), nil
 		}
-		djson := gjson.Get(content, "data")
-		return djson.String(), nil
+		return "", errors.New(data[0] + ":" + data[1])
 	}
 
 	utils.StreamResponse(resp, recvCh, errCh, fn)

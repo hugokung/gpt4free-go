@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	rd "math/rand"
-	"strings"
 	"time"
 
 	http "github.com/bogdanfinn/fhttp"
@@ -124,30 +123,45 @@ func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error, f
 			continue
 		}
 
-		if strings.Contains(rawLine, ":") {
-			data := strings.SplitN(rawLine, ":", 2)
-			data[0], data[1] = strings.TrimSpace(data[0]), strings.TrimSpace(data[1])
-			switch data[0] {
-			case "data":
-				if data[1] == "[DONE]" {
-					errCh <- g4f.StreamCompleted
-					return
-				}
-				log.Printf("data: %v", data[1])
-				if fn != nil {
-					decodeData, deErr := fn(data[1])
-					if deErr != nil {
-						errCh <- deErr
-						continue
-					}
-					recvCh <- decodeData
-				} else {
-					recvCh <- data[1]
-				}
-			default:
-				errCh <- errors.New("unexpected type: " + data[0])
+		if fn == nil {
+			errCh <- errors.New("without decode Funciton")
+			return
+		}
+
+		decodeData, deErr := fn(rawLine)
+		if deErr != nil {
+			errCh <- deErr
+			if errors.Is(deErr, g4f.StreamCompleted) {
 				return
 			}
+			continue
 		}
+		recvCh <- decodeData
+
+		//if strings.Contains(rawLine, ":") {
+		//	data := strings.SplitN(rawLine, ":", 2)
+		//	data[0], data[1] = strings.TrimSpace(data[0]), strings.TrimSpace(data[1])
+		//	switch data[0] {
+		//	case "data":
+		//		if data[1] == "[DONE]" {
+		//			errCh <- g4f.StreamCompleted
+		//			return
+		//		}
+		//		log.Printf("data: %v", data[1])
+		//		if fn != nil {
+		//			decodeData, deErr := fn(data[1])
+		//			if deErr != nil {
+		//				errCh <- deErr
+		//				continue
+		//			}
+		//			recvCh <- decodeData
+		//		} else {
+		//			recvCh <- data[1]
+		//		}
+		//	default:
+		//		errCh <- errors.New("unexpected type: " + data[0])
+		//		return
+		//	}
+		//}
 	}
 }

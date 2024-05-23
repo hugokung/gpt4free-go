@@ -119,6 +119,8 @@ func getTokenAndIdempotencyKey(BaseUrl string, proxy string, resCh chan tokenAnd
 
 	page.MustElement("input[placeholder=\"Send a message\"]").MustInput("hello")
 	page.MustElement("button[type=submit]").MustClick()
+	utils.Sleep(2)
+
 	defer browser.Close()
 	defer page.Close()
 	defer rt.Stop()
@@ -161,5 +163,10 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 		errCh <- err
 		return
 	}
-	util.StreamResponse(resp, recvCh, errCh, nil)
+
+	fn := func(content string) (string, error) {
+		return content, nil
+	}
+
+	util.StreamResponse(resp, recvCh, errCh, fn)
 }

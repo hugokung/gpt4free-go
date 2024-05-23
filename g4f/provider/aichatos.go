@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -89,5 +90,18 @@ func (a *AiChatOs) CreateAsyncGenerator(messages Messages, recvCh chan string, e
 		return
 	}
 
-	utils.StreamResponse(resp, recvCh, errCh, nil)
+	fn := func(content string) (string, error) {
+		data := strings.SplitN(content, ":", 2)
+		data[0], data[1] = strings.TrimSpace(data[0]), strings.TrimSpace(data[1])
+		if data[0] == "data" {
+			if data[1] == "[DONE]" {
+				return "", g4f.StreamCompleted
+			} else {
+				return data[1], nil
+			}
+		}
+		return "", errors.New(data[0] + ":" + data[1])
+	}
+
+	utils.StreamResponse(resp, recvCh, errCh, fn)
 }
