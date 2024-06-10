@@ -18,26 +18,34 @@ var (
 
 func init() {
 	var (
-		aichatos            = &AiChatOs{}
-		aichatosRetry       = &RetryProvider{}
+		aichatos      = &AiChatOs{}
+		aichatosRetry = &RetryProvider{}
+
 		chatgpt4online      = &Chatgpt4Online{}
 		chatgpt4onlineRetry = &RetryProvider{}
-		gpttalkru           = &GptTalkRu{}
-		gpttalkruRetry      = &RetryProvider{}
+
+		gpttalkru      = &GptTalkRu{}
+		gpttalkruRetry = &RetryProvider{}
+
+		llama      = &Llama{}
+		llamaRetry = &RetryProvider{}
 	)
 
 	aichatosRetry = aichatosRetry.Create()
 	chatgpt4onlineRetry = chatgpt4onlineRetry.Create()
 	gpttalkruRetry = gpttalkruRetry.Create()
+	llamaRetry = llamaRetry.Create()
 
 	aichatosRetry.ProviderList = append(aichatosRetry.ProviderList, aichatos.Create())
 	chatgpt4onlineRetry.ProviderList = append(chatgpt4onlineRetry.ProviderList, chatgpt4online.Create())
 	gpttalkruRetry.ProviderList = append(gpttalkruRetry.ProviderList, gpttalkru.Create())
+	llamaRetry.ProviderList = append(llamaRetry.ProviderList, llama.Create())
 
 	Str2Provider = map[string]Provider{
 		"aichatos":       aichatosRetry,
 		"chatgpt4online": chatgpt4onlineRetry,
 		"gpttalk":        gpttalkruRetry,
+		"llama":          llamaRetry,
 	}
 }
 
@@ -190,9 +198,26 @@ func (p *ProviderHttpClient) Do() (*http.Response, error) {
 	}
 
 	if p.Header != nil {
-		for k, v := range p.Header {
-			req.Header.Add(k, v)
+		hd := http.Header{
+			http.HeaderOrderKey: {
+				"Accept",
+				"Accept-Encoding",
+				"Accept-Language",
+				"Content-Type",
+				"Dnt",
+				"Origin",
+				"Referer",
+				"Sec-Ch-Ua",
+				"Sec-Ch-Ua-Mobile",
+				"Sec-Ch-Ua-Platform",
+				"Sec-Fetch-Dest",
+				"User-Agent",
+			},
 		}
+		for k, v := range p.Header {
+			hd[k] = []string{v}
+		}
+		req.Header = hd
 	}
 
 	if p.Cookies != nil {

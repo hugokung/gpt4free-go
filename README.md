@@ -43,10 +43,14 @@ for {
 ## 🤖 GPT-3.5  
 | Website | Provider | Stream | Status | Auth |
 | ------  | -------  | ------ | ------ | ---- |
-| [chatgpt4online.org](https://chatgpt4online.org) | `g4f.provider.Chatgpt4Online` | ✔️ | ![Unknown](https://img.shields.io/badge/Unknown-grey) | ❌ |
+| [chatgpt4online.org](https://chatgpt4online.org) | `g4f.provider.Chatgpt4Online` | ✔️ | ![Active](https://img.shields.io/badge/Active-brightgreen) | ❌ |
 | [gpttalk.ru](https://gpttalk.ru) | `g4f.provider.GptTalkRu` | ✔️ | ![Unknown](https://img.shields.io/badge/Unknown-grey) | ❌ |
 | [chat10.aichatos.xyz](https://chat10.aichatos.xyz) | `g4f.provider.AiChatOs` | ✔️ | ![Active](https://img.shields.io/badge/Active-brightgreen) | ❌ |
 
+## 🤖 Other
+| Website | Provider | Stream | Status | Auth |
+| ------  | -------  | ------ | ------ | ---- |
+|[llama2.ai](https://www.llama2.ai)|`g4f.provider.Llama`|✔️|![Active](https://img.shields.io/badge/Active-brightgreen) | ❌ | 
 
 ## ‼️ Declaration  
 If you do not want your website to appear here, please raise an issue and I will remove it immediately.

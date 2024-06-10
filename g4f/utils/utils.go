@@ -11,7 +11,6 @@ import (
 	"io"
 	"log"
 	rd "math/rand"
-	"strings"
 	"time"
 
 	http "github.com/bogdanfinn/fhttp"
@@ -25,8 +24,12 @@ import (
 func GetArgsFromBrowser(tgtUrl string, proxy string, doBypassCloudflare bool) (map[string]string, error) {
 	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
 		Set("--no-sandbox").
-		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
+		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false)
+	if proxy != "" {
+		u = u.Proxy(proxy)
+	}
+	ut := u.MustLaunch()
+	browser := rod.New().ControlURL(ut).MustConnect()
 	page := browser.NoDefaultDevice().MustPage(tgtUrl)
 	utils.Sleep(5)
 	if doBypassCloudflare {
@@ -93,7 +96,9 @@ func Encrypt(publicKeyPEM, value string) (string, error) {
 func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error, fn func(string) (string, error)) {
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("resp status: %v\n", resp.StatusCode)
+		respBytes, _ := io.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		log.Printf("resp status: %v, resp: %v\n", resp.StatusCode, string(respBytes))
 		errCh <- g4f.ErrResponse
 		return
 	}
@@ -118,30 +123,45 @@ func StreamResponse(resp *http.Response, recvCh chan string, errCh chan error, f
 			continue
 		}
 
-		if strings.Contains(rawLine, ":") {
-			data := strings.SplitN(rawLine, ":", 2)
-			data[0], data[1] = strings.TrimSpace(data[0]), strings.TrimSpace(data[1])
-			switch data[0] {
-			case "data":
-				if data[1] == "[DONE]" {
-					errCh <- g4f.StreamCompleted
-					return
-				}
-				log.Printf("data: %v", data[1])
-				if fn != nil {
-					decodeData, deErr := fn(data[1])
-					if deErr != nil {
-						errCh <- deErr
-						continue
-					}
-					recvCh <- decodeData
-				} else {
-					recvCh <- data[1]
-				}
-			default:
-				errCh <- errors.New("unexpected type: " + data[0])
+		if fn == nil {
+			errCh <- errors.New("without decode Funciton")
+			return
+		}
+
+		decodeData, deErr := fn(rawLine)
+		if deErr != nil {
+			errCh <- deErr
+			if errors.Is(deErr, g4f.StreamCompleted) {
 				return
 			}
+			continue
 		}
+		recvCh <- decodeData
+
+		//if strings.Contains(rawLine, ":") {
+		//	data := strings.SplitN(rawLine, ":", 2)
+		//	data[0], data[1] = strings.TrimSpace(data[0]), strings.TrimSpace(data[1])
+		//	switch data[0] {
+		//	case "data":
+		//		if data[1] == "[DONE]" {
+		//			errCh <- g4f.StreamCompleted
+		//			return
+		//		}
+		//		log.Printf("data: %v", data[1])
+		//		if fn != nil {
+		//			decodeData, deErr := fn(data[1])
+		//			if deErr != nil {
+		//				errCh <- deErr
+		//				continue
+		//			}
+		//			recvCh <- decodeData
+		//		} else {
+		//			recvCh <- data[1]
+		//		}
+		//	default:
+		//		errCh <- errors.New("unexpected type: " + data[0])
+		//		return
+		//	}
+		//}
 	}
 }
