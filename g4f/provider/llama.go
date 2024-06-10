@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
@@ -67,7 +70,7 @@ type tokenAndKey struct {
 	IdempotencyKey string
 }
 
-func getTokenAndIdempotencyKey(BaseUrl string, proxy string, resCh chan tokenAndKey) {
+func getTokenAndIdempotencyKey(BaseUrl string, proxy string, resCh chan tokenAndKey, errCh chan error) {
 	u := launcher.New().Set("disable-blink-features", "AutomationControlled").
 		Set("--no-sandbox").
 		Set("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36").Headless(false)
@@ -109,17 +112,28 @@ func getTokenAndIdempotencyKey(BaseUrl string, proxy string, resCh chan tokenAnd
 	})
 	go rt.Run()
 
+	var iframe *rod.Page
 	page.Navigate(BaseUrl)
 	utils.Sleep(5)
-	iframe := page.MustElement("iframe").MustFrame()
-	p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
-	p.MustWaitStable()
-	p.MustElement("input[type=checkbox]").MustClick()
-	utils.Sleep(3)
+	tErr := rod.Try(func() {
+		iframe = page.Timeout(3 * time.Second).MustElement("iframe").MustFrame().CancelTimeout()
+		p := page.Browser().MustPageFromTargetID(proto.TargetTargetID(iframe.FrameID))
+		p.MustWaitStable()
+		p.Timeout(3 * time.Second).MustElement("input[type=checkbox]").MustClick().CancelTimeout()
+		utils.Sleep(3)
 
-	page.MustElement("input[placeholder=\"Send a message\"]").MustInput("hello")
-	page.MustElement("button[type=submit]").MustClick()
-	utils.Sleep(2)
+		page.MustElement("input[placeholder=\"Send a message\"]").MustInput("hello")
+		page.MustElement("button[type=submit]").MustClick()
+		utils.Sleep(2)
+	})
+	if tErr != nil {
+		if errors.Is(tErr, context.DeadlineExceeded) {
+			return
+		} else {
+			errCh <- tErr
+			return
+		}
+	}
 
 	defer browser.Close()
 	defer page.Close()
@@ -137,9 +151,24 @@ func (l *Llama) CreateAsyncGenerator(messages Messages, recvCh chan string, errC
 	header["Accept-Encoding"] = "gzip, deflate, br"
 
 	prompt := LlamaFormatPrompt(messages)
-	resCh := make(chan tokenAndKey)
-	go getTokenAndIdempotencyKey(l.BaseUrl, proxy, resCh)
-	res := <-resCh
+	resCh := make(chan tokenAndKey, 1)
+	terrCh := make(chan error)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	go getTokenAndIdempotencyKey(l.BaseUrl, proxy, resCh, terrCh)
+	var res tokenAndKey
+	select {
+	case res = <-resCh:
+		break
+	case err := <-terrCh:
+		errCh <- err
+		return
+	case <-ctx.Done():
+		errCh <- errors.New("Get token time out")
+		return
+	}
+
 	data := map[string]interface{}{
 		"prompt":         prompt,
 		"model":          l.DefaultModel,
