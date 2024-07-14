@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hugokung/G4f/g4f/provider"
+	"github.com/hugokung/gpt4free-go/g4f/provider"
 )
 
 func main() {

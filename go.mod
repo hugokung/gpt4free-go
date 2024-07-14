@@ -1,4 +1,4 @@
-module github.com/hugokung/G4f
+module github.com/hugokung/gpt4free-go
 
 go 1.21.6
 

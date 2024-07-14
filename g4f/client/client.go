@@ -4,10 +4,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/hugokung/G4f/g4f"
-	"github.com/hugokung/G4f/g4f/models"
-	"github.com/hugokung/G4f/g4f/provider"
-	"github.com/hugokung/G4f/g4f/utils"
+	"github.com/hugokung/gpt4free-go/g4f"
+	"github.com/hugokung/gpt4free-go/g4f/models"
+	"github.com/hugokung/gpt4free-go/g4f/provider"
+	"github.com/hugokung/gpt4free-go/g4f/utils"
 )
 
 type Client struct {

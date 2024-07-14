@@ -1,6 +1,6 @@
 package models
 
-import "github.com/hugokung/G4f/g4f/provider"
+import "github.com/hugokung/gpt4free-go/g4f/provider"
 
 type Model struct {
 	Name         string
