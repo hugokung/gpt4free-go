@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hugokung/G4f/g4f/provider"
-	"github.com/hugokung/G4f/g4f/utils"
+	"github.com/hugokung/gpt4free-go/g4f/provider"
+	"github.com/hugokung/gpt4free-go/g4f/utils"
 )
 
 // xvfb-run go run chatgpt4online_example.go

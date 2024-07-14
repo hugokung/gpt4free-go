@@ -12,8 +12,8 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-rod/rod/lib/utils"
-	"github.com/hugokung/G4f/g4f"
-	util "github.com/hugokung/G4f/g4f/utils"
+	"github.com/hugokung/gpt4free-go/g4f"
+	util "github.com/hugokung/gpt4free-go/g4f/utils"
 	"github.com/tidwall/gjson"
 )
 

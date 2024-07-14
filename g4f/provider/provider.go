@@ -9,7 +9,7 @@ import (
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/bogdanfinn/tls-client/profiles"
-	"github.com/hugokung/G4f/g4f"
+	"github.com/hugokung/gpt4free-go/g4f"
 )
 
 var (

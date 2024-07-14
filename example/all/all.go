@@ -4,9 +4,9 @@ import (
 	"errors"
 	"log"
 
-	"github.com/hugokung/G4f/g4f"
-	"github.com/hugokung/G4f/g4f/client"
-	"github.com/hugokung/G4f/g4f/provider"
+	"github.com/hugokung/gpt4free-go/g4f"
+	"github.com/hugokung/gpt4free-go/g4f/client"
+	"github.com/hugokung/gpt4free-go/g4f/provider"
 )
 
 func main() {

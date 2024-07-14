@@ -5,8 +5,8 @@ import (
 	"io"
 	"log"
 
-	"github.com/hugokung/G4f/g4f"
-	"github.com/hugokung/G4f/g4f/utils"
+	"github.com/hugokung/gpt4free-go/g4f"
+	"github.com/hugokung/gpt4free-go/g4f/utils"
 )
 
 type GptTalkRu struct {
