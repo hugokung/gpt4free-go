@@ -7,7 +7,7 @@ This project is only used for learning golang.
 
 ## ⏬ Installation
 ```shell
-go get github.com/hugokung/G4f
+go get github.com/hugokung/gpt4free-go
 ```
 
 ## 💡Usage  
